@@ -19,6 +19,7 @@ Client::Client(std::string ip, int port) : _port(port), _ip(ip)
 
 Client::~Client()
 {
+    disconnect();
     std::cout << "Destroyed CLIENT" << std::endl;
 }
 
@@ -50,7 +51,19 @@ int Client::try_connect()
 
 int Client::disconnect()
 {
-    close(this->_clientSd);
+    int flags = fcntl(fd, F_GETFL);
+    if (flags == -1) {
+        if (errno == EBADF) {
+            std::cout << "Not a valid/open fd. Can't disconnect" << std::endl;
+            return 1;
+        } else {
+          std::cout << "fcntl(F_GETFL) failed with errno: " << errno << std::endl;
+          return 1;
+        }
+    }
+    else {
+        close(this->_clientSd);
+    }
     std::cout << "Disconnected from the server!" << std::endl;
     return 0;
 }
