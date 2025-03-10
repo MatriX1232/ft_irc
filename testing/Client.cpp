@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Client.cpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/03/09 00:05:25 by root              #+#    #+#             */
-/*   Updated: 2025/03/09 15:31:07 by root             ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "Client.hpp"
 
 Client::Client(std::string ip, int port) : _port(port), _ip(ip)
@@ -38,32 +26,20 @@ int Client::try_connect()
     sendSockAddr.sin_port = htons(this->_port);
     int clientSd = socket(AF_INET, SOCK_STREAM, 0);
 
-    int status = connect(clientSd,
-                         (sockaddr*) &sendSockAddr, sizeof(sendSockAddr));
+    int status = connect(clientSd, (sockaddr*) &sendSockAddr, sizeof(sendSockAddr));
     if(status < 0)
     {
         std::cout<<"Error connecting to socket!"<<std::endl;
         return -1;
     }
+    this->_clientSd = clientSd; // Assign the socket descriptor to the member variable
     std::cout << "Connected to the server!" << std::endl;
     return 0;
 }
 
 int Client::disconnect()
 {
-    int flags = fcntl(fd, F_GETFL);
-    if (flags == -1) {
-        if (errno == EBADF) {
-            std::cout << "Not a valid/open fd. Can't disconnect" << std::endl;
-            return 1;
-        } else {
-          std::cout << "fcntl(F_GETFL) failed with errno: " << errno << std::endl;
-          return 1;
-        }
-    }
-    else {
-        close(this->_clientSd);
-    }
+    close(this->_clientSd);
     std::cout << "Disconnected from the server!" << std::endl;
     return 0;
 }
@@ -73,7 +49,6 @@ int Client::send(std::string msg)
     char _msg[150];
     bzero(_msg, 150);
     strcpy(_msg, msg.c_str());
-    // :: is used to call the global function send | not the member function send
     int status = ::send(this->_clientSd, (char*)&_msg, 150, 0);
     if(status < 0)
     {
@@ -96,4 +71,3 @@ int Client::recv()
     std::cout << "Message received: " << this->_msg << std::endl;
     return 0;
 }
-
