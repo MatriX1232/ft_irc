@@ -92,6 +92,7 @@ int main(int argc, char *argv[])
     Client client("127.0.0.1", 25565);
     client.try_connect();
     client.send("Hello World!");
+    client.send_file("Makefile");
     client.disconnect();
     return 0;
 }

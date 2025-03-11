@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/08 23:47:53 by root              #+#    #+#             */
-/*   Updated: 2025/03/09 11:56:24 by root             ###   ########.fr       */
+/*   Updated: 2025/03/10 22:54:18 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,7 +46,9 @@ class Server
         int listen(int n_clients);
         int disconnect();
         int send(std::string msg);
-        int recv();
+        std::string recv();
+
+        int recv_file();
 
         int get_port();
         int get_serverSd();

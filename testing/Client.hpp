@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/08 23:47:53 by root              #+#    #+#             */
-/*   Updated: 2025/03/09 11:38:11 by root             ###   ########.fr       */
+/*   Updated: 2025/03/10 22:55:36 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,8 +47,9 @@ class Client
         int try_connect();
         int disconnect();
         int send(std::string msg);
-        int recv();
+        std::string recv();
 
+        int send_file(std::string filename);
 };
 
 

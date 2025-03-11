@@ -122,6 +122,7 @@ int main(int argc, char *argv[])
     Server server(25565);
     server.listen(1);
     server.recv();
+    server.recv_file();
     server.disconnect();
     return 0;
 }

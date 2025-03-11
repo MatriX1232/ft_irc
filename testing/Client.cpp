@@ -59,15 +59,42 @@ int Client::send(std::string msg)
     return 0;
 }
 
-int Client::recv()
+std::string Client::recv()
 {
     bzero(this->_msg, 150);
     long status = ::recv(this->_clientSd, (char*)this->_msg, sizeof(this->_msg), 0);
     if(status < 0)
     {
         std::cout << "Error receiving message" << std::endl;
-        return -1;
+        return NULL;
     }
     std::cout << "Message received: " << this->_msg << std::endl;
+    return this->_msg;
+}
+
+int Client::send_file(std::string filename)
+{
+    this->send(filename);
+    std::ifstream file;
+    file.open(filename.c_str(), std::ios::in);
+    if(!file)
+    {
+        std::cout << "Error opening file" << std::endl;
+        return -1;
+    }
+    char buffer[256];
+    bzero(buffer, 256);
+    int nread = 0;
+    while((nread = file.readsome(buffer, 256)) > 0)
+    {
+        if(::send(this->_clientSd, buffer, nread, 0) < 0)
+        {
+            std::cout << "Error sending file" << std::endl;
+            return -1;
+        }
+        bzero(buffer, 256);
+    }
+    file.close();
+    std::cout << "File sent successfully" << std::endl;
     return 0;
 }

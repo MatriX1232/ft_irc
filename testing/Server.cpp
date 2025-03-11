@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/09 11:02:26 by root              #+#    #+#             */
-/*   Updated: 2025/03/09 14:51:37 by root             ###   ########.fr       */
+/*   Updated: 2025/03/10 23:00:02 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,7 +72,7 @@ int Server::disconnect()
     return (0);
 }
 
-int Server::recv()
+std::string Server::recv()
 {
     char msg[150];
     //receive a message from the client (listen)
@@ -82,9 +82,33 @@ int Server::recv()
     if(!strcmp(msg, "exit"))
     {
         std::cout << "Client has quit the session" << std::endl;
-        return (-1);
+        return NULL;
     }
     std::cout << "Client: " << msg << std::endl;
     std::cout << "Byes read: " << bytesRead << std::endl;
-    return (0);
+    return (msg);
+}
+
+int Server::recv_file()
+{
+    std::string filename = this->recv() + "_RECV";
+
+    std::ofstream file;
+    file.open(filename.c_str(), std::ios::out);
+    if(!file)
+    {
+        std::cout << "Error creating file" << std::endl;
+        return -1;
+    }
+    char buffer[256];
+    bzero(buffer, 256);
+    int bytesReceived = 0;
+    while((bytesReceived = ::recv(this->_newSd, buffer, 256, 0)) > 0)
+    {
+        file << buffer;
+        bzero(buffer, 256);
+    }
+    std::cout << "File received" << std::endl;
+    file.close();
+    return 0;
 }
