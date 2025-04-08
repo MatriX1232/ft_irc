@@ -1,7 +1,7 @@
 ## How to run:
 ### Server:
 * `make`
-* `./ircserv [port] [password]`: `irc 25565 pass`
+* `./ircserv [port] [password]`: `./ircserv 25565 pass`
 
 ### Client:
 * `nc -C [IP] [port]`: `nc -C 127.0.0.1 25565`
