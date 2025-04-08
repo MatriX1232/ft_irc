@@ -1,3 +1,10 @@
+### Info
+## TODO:
+* `ALL`
+## DONE:
+* `FILE SHARE`
+
+
 ## Commands
 the right syntax for the listed commands is explained in the [protocol](https://datatracker.ietf.org/doc/html/rfc1459#section-4.4.2). 
 
