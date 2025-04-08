@@ -1,10 +1,12 @@
-# Info
 ## TODO:
 * `ALL`
 
 ## DONE:
 
 ### Mandatory
+* created classes (Client, Server)
+* added basic sockert handling
+* added classes (Channels, Message)
 ### Bonus
 * `FILE SHARE`
 
