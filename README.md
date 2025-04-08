@@ -2,6 +2,8 @@
 ## TODO:
 * `ALL`
 ## DONE:
+# Mandatory
+# Bonus
 * `FILE SHARE`
 
 
