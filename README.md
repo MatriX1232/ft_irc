@@ -1,9 +1,11 @@
-### Info
+# Info
 ## TODO:
 * `ALL`
+
 ## DONE:
-# Mandatory
-# Bonus
+
+### Mandatory
+### Bonus
 * `FILE SHARE`
 
 
