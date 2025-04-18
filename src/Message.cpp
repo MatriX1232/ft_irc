@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/04 12:29:50 by root              #+#    #+#             */
-/*   Updated: 2025/04/08 14:27:57 by root             ###   ########.fr       */
+/*   Updated: 2025/04/15 15:29:14 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,9 +65,13 @@ std::ostream& operator<<(std::ostream &os, const Message &msg)
 {
     std::time_t timestamp = msg.getTimestamp();
     std::string strTime = strtok(std::ctime(&timestamp), "\n");
+    os << CYAN;
     os << "<" << strTime;
-    os << " | " << msg.getSender();
-    os << " | " << msg.getBytesRead() << " [bytes]" << ">  ";
+    os << BOLD;
+    os << " | " << msg.getSender() << " | ";
+    os << END << CYAN;
+    os << msg.getBytesRead() << " [bytes]" << ">  ";
+    os << END;
     os << msg.getContent();
 
     return os;

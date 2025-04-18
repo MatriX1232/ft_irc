@@ -1,14 +1,25 @@
 CC = c++
-CPPFLAGS = -Wall -Wextra -Werror -std=c++98 -g
-INCLUDES = -I/usr/include/
+CPPFLAGS = -Wall -Wextra -Werror -std=c++98 -g \
+	-O3 \
+	-march=raptorlake \
+	-mtune=raptorlake \
+	-flto \
+	-funroll-loops \
+	-falign-functions=64
+
+INCLUDES = -I/usr/include/ -I./include
 
 NAME = ircserv
 
 SRCS = \
 	src/main.cpp \
 	src/Server.cpp \
+	src/Client.cpp \
 	src/ft_logs.cpp \
-	src/Message.cpp
+	src/Message.cpp \
+	src/utils.cpp \
+	src/Channel.cpp \
+	src/commands/parse_message.cpp
 
 OBJS = $(SRCS:%.cpp=%.o)
 

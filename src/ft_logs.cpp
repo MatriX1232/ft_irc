@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/13 12:26:51 by root              #+#    #+#             */
-/*   Updated: 2025/03/29 00:08:19 by root             ###   ########.fr       */
+/*   Updated: 2025/04/09 14:39:32 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,13 +23,13 @@ const std::string END = "\033[0m";
 void ft_log(const std::string &str, const std::string &str_optional = "", int level = 0)
 {
     if (level == 0)
-        std::cout << "[ " << GREEN << "INFO" << END << " ] " << str;
+        std::cout << "[ " << CYAN << "INFO" << END << " ] " << str;
     else if (level == 1)
-        std::cout << "[ " << CYAN << "SUCCESS" << END << " ]    " << str;
+        std::cout << "[ " << GREEN << "SUCCESS" << END << " ]    " << str;
     else if (level == 2)
         std::cout << "[ " << YELLOW << "WARNING" << END << " ] " << str;
     else if (level == 3)
-        std::cout << "[ " << RED << "ERROR" << END << " ]   " << str;
+        std::cerr << "[ " << RED << "ERROR" << END << " ]   " << str;
 
     if (!str_optional.empty())
         std::cout << " | " << str_optional << std::endl;
@@ -45,13 +45,13 @@ void ft_log_sub(const std::string &str, const std::string &str_optional = "", in
         std::cout << "    |--->  ";
 
     if (level == 0)
-        std::cout << "[ " << GREEN << "INFO" << END << " ] " << str;
+        std::cout << "[ " << CYAN << "INFO" << END << " ] " << str;
     else if (level == 1)
-        std::cout << "[ " << CYAN << "SUCCESS" << END << " ]    " << str;
+        std::cout << "[ " << GREEN << "SUCCESS" << END << " ]    " << str;
     else if (level == 2)
         std::cout << "[ " << YELLOW << "WARNING" << END << " ] " << str;
     else if (level == 3)
-        std::cout << "[ " << RED << "ERROR" << END << " ]   " << str;
+        std::cerr << "[ " << RED << "ERROR" << END << " ]   " << str;
 
     if (!str_optional.empty())
         std::cout << " | " << str_optional << std::endl;

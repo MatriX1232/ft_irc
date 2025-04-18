@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/03 00:29:45 by root              #+#    #+#             */
-/*   Updated: 2025/04/08 13:50:55 by root             ###   ########.fr       */
+/*   Updated: 2025/04/16 00:02:12 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,24 +17,29 @@
 #include <map>
 #include <vector>
 #include <ctime>
+#include "Message.hpp"
+#include "Client.hpp"
 
 class Channel
 {
     private:
-        // vector < map <time, userName, messageContent> > _messages;
-        std::vector<std::map<time_t, std::string, std::string> > _messages;
+        std::vector<Message> _messages;
+        std::vector<Client> _clients;
+        std::string _name;
+        std::string _topic;
+        std::string _password;
     
     public:
-        Channel();
+        Channel(std::string name = "", std::string topic = "", std::string password = "");
         ~Channel();
-        void addMessage(std::string userName, std::string messageContent);
+        void addMessage(Message msg);
         void displayMessages();
         void clearMessages();
-        std::vector<std::map<std::string, std::string> > getMessages();
-        std::map<time_t, std::string, std::string> getMessageByIndex(int index);
-        std::map<time_t, std::string, std::string> getMessageByUser(std::string userName);
-        std::map<time_t, std::string, std::string> getMessageByTime(time_t time);
-        std::map<time_t, std::string, std::string> getMessageByContent(std::string messageContentFragment);
+        std::vector<Message> getMessages();
+        Message getMessageByIndex(int index);
+        std::vector<Message> getMessageByUser(std::string userName);
+        std::vector<Message> getMessageByContent(std::string messageContentFragment);
+        friend std::ostream &operator<<(std::ostream &os, const Channel &channel);
 };
 
 #endif

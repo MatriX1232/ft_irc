@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/08 23:47:53 by root              #+#    #+#             */
-/*   Updated: 2025/04/06 16:00:21 by root             ###   ########.fr       */
+/*   Updated: 2025/04/18 22:49:19 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,24 +34,38 @@
 
 class Client
 {
-    private:
-        int             _port;
-        std::string     _ip;
-        int             _clientSd;
-        char            _msg[150];
-        std::string     _nickname;
-        
-    
-    public:
-        Client(std::string ip, int port);
-        ~Client();
-        
-        int try_connect();
-        int disconnect();
-        int send(std::string msg);
-        std::string recv();
+		private:
+		int             _clientSd;
+				std::string     _ip;
+				int             _port;
+				char            _msg[150];
+				std::string     _nickname;
+				bool            _authenticated;
+		
+		public:
+		Client();
+				Client(int sd, std::string ip, int port);
+				Client(const Client& other);
+				Client& operator=(const Client& other);
+				~Client();
+				
+				int         getSd() const;
+				std::string getIp() const;
+				int         getPort() const;
+				std::string getNickname() const;
+				int getListenFd() const;
+				int getFd() const;
+				bool		isAuthenticated() const;
+				
+				void setNickname(std::string nickname);
+				void setAuthenticated(bool authenticated);
+				void setSd(int sd);
+				void setIp(std::string ip);
+				void setPort(int port);
 
-        int send_file(std::string filename);
+				bool    isEmpty();
+
+				friend std::ostream &operator<<(std::ostream& os, const Client& client);
 };
 
 #endif
