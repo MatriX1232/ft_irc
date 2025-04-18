@@ -1,3 +1,24 @@
+## How to run:
+### Server:
+* `make`
+* `./ircserv [port] [password]`: `./ircserv 25565 pass`
+
+### Client:
+* `nc -C [IP] [port]`: `nc -C 127.0.0.1 25565`
+## TODO:
+* `ALL`
+* non-blocking
+
+## DONE:
+
+### Mandatory
+* created classes (Client, Server)
+* added basic sockert handling
+* added classes (Channels, Message)
+### Bonus
+* `FILE SHARE`
+
+
 ## Commands
 the right syntax for the listed commands is explained in the [protocol](https://datatracker.ietf.org/doc/html/rfc1459#section-4.4.2). 
 
