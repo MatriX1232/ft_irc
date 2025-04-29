@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/09 19:43:32 by root              #+#    #+#             */
-/*   Updated: 2025/04/29 16:59:45 by root             ###   ########.fr       */
+/*   Updated: 2025/04/29 17:12:07 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,11 +79,13 @@ std::vector<Message> Channel::getMessageByContent(std::string messageContentFrag
 
 std::ostream &operator<<(std::ostream &os, const Channel &channel)
 {
+    os << CYAN << "--------------------------" << END << std::endl;
     os << CYAN << "Channel Name: " << END << channel._name << std::endl;
     os << CYAN << "Topic: " << END << channel._topic << std::endl;
     os << RED << "Password: " << channel._password << std::endl;
     os << CYAN << "Messages: " << END << std::endl;
     for (int i = 0; i < (int)channel._messages.size(); i++)
         os << channel._messages[i] << std::endl;
+    os << CYAN << "--------------------------" << END << std::endl;
     return os;
 }

@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/13 12:28:49 by root              #+#    #+#             */
-/*   Updated: 2025/04/29 16:56:33 by root             ###   ########.fr       */
+/*   Updated: 2025/04/29 17:11:42 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,8 +38,9 @@ int main(int argc, char *argv[])
 {
     if (argc != 3)
     {
-        ft_log("Usage: ./ircserv [port] [password]", "", 3);
-        return -1;
+        std::cout << WARNING << "Usage: ./ircserv <port> <password>" << std::endl;
+        std::cout << INFO << "Example: ./ircserv 25566 mypassword" << std::endl;
+        return (EXIT_FAILURE);
     }
 
     Server server(atoi(argv[1]));
@@ -94,9 +95,10 @@ int main(int argc, char *argv[])
         }
     }
 
+    std::cout << std::endl << std::endl;
     std::cout << server << std::endl;
     std::cout << std::endl << std::endl;
     std::cout << channel << std::endl;
 
-    return 0;
+    return (EXIT_SUCCESS);
 }
