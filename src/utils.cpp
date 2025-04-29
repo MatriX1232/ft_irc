@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cstring>
 #include "../include/utils.hpp"
 
 std::vector<std::string> split(const std::string &str, char delimiter)
@@ -20,4 +21,13 @@ std::vector<std::string> split(const std::string &str, char delimiter)
     tokens.push_back(str.substr(start));
 
     return tokens;
+}
+
+std::string c_strip(char *str)
+{
+    char *end = str + strlen(str) - 1;
+    while (end > str && (*end == ' ' || *end == '\n' || *end == '\r' || *end == '\t'))
+        end--;
+    *(end + 1) = '\0';
+    return str;
 }

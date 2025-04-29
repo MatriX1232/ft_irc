@@ -67,6 +67,7 @@ class Server
 		std::vector<Client> get_clients() const;
         
         bool    check_password(std::string password);
+        int     assign_read_mode(int listen_fd, fd_set &readfds);
 
         friend std::ostream &operator<<(std::ostream &os, const Server &server);
 };

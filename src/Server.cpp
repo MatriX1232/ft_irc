@@ -6,21 +6,25 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/09 11:02:26 by root              #+#    #+#             */
-/*   Updated: 2025/04/18 22:52:39 by root             ###   ########.fr       */
+/*   Updated: 2025/04/29 17:00:05 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/utils.hpp"
 #include "../include/Server.hpp"
+#include "../include/Client.hpp"
+#include <vector>
+#include <string>
+#include <algorithm>
 
 Server::Server(int port) : _port(port)
 {
-    std::cout << "Created new SERVER" << std::endl;
+    std::cout << INFO << "Created new SERVER" << std::endl;
 }
 
 Server::~Server()
 {
-    std::cout << "Destroyed SERVER" << std::endl;
+    std::cout << WARNING << "Destroyed SERVER" << std::endl;
 }
 
 int Server::start_listening(int n_clients)
@@ -34,7 +38,7 @@ int Server::start_listening(int n_clients)
     int serverSd = socket(AF_INET, SOCK_STREAM, 0);
     if(serverSd < 0)
     {
-        std::cerr << "Error establishing the server socket" << std::endl;
+        std::cerr << ERROR << "Error establishing the server socket" << std::endl;
         exit(0);
     }
 
@@ -45,12 +49,12 @@ int Server::start_listening(int n_clients)
     int bindStatus = bind(serverSd, (struct sockaddr*) &servAddr, sizeof(servAddr));
     if(bindStatus < 0)
     {
-        std::cerr << "Error binding socket to local address" << std::endl;
+        std::cerr << ERROR << "Error binding socket to local address" << std::endl;
         exit(0);
     }
 
     ::listen(serverSd, n_clients);
-    std::cout << "Listening on port " << _port << " for " << n_clients << " clients" << std::endl;
+    std::cout << WARNING << "Listening on port " << _port << " for " << n_clients << " clients" << std::endl;
 
     this->_serverSd = serverSd;
     return 0;
@@ -70,7 +74,7 @@ int Server::accept_new_client()
     int poll_res = poll(&pfd, 1, -1); // Wait indefinitely for an event
     if (poll_res < 0)
     {
-        std::cerr << "Poll error on server socket" << std::endl;
+        std::cerr << ERROR << "Poll error on server socket" << std::endl;
         return -1;
     }
     if (pfd.revents & POLLIN)
@@ -80,7 +84,7 @@ int Server::accept_new_client()
         {
             if (errno == EWOULDBLOCK || errno == EAGAIN)
                 return 0; // No new connection yet
-            std::cerr << "Error accepting request from client!" << std::endl;
+            std::cerr << ERROR << "Error accepting request from client!" << std::endl;
             return -1;
         }
 
@@ -88,13 +92,13 @@ int Server::accept_new_client()
         int flags = fcntl(newSd, F_GETFL, 0);
         if (flags < 0)
         {
-            std::cerr << "Error getting flags on new socket: " << strerror(errno) << std::endl;
+            std::cerr << ERROR << "Error getting flags on new socket: " << strerror(errno) << std::endl;
             close(newSd);
             return -1;
         }
         if (fcntl(newSd, F_SETFL, flags | O_NONBLOCK) < 0)
         {
-            std::cerr << "Error setting non-blocking on new socket: " << strerror(errno) << std::endl;
+            std::cerr << ERROR << "Error setting non-blocking on new socket: " << strerror(errno) << std::endl;
             close(newSd);
             return -1;
         }
@@ -105,6 +109,7 @@ int Server::accept_new_client()
         Client newClient(newSd, ip, port);
         this->_clients.push_back(newClient);
         std::cout <<
+            INFO <<
             "Connected with client! | " <<
             "SD: " << newSd << " | " <<
             "IP: " << ip << " | " <<
@@ -112,20 +117,41 @@ int Server::accept_new_client()
     }
     return 0;
 }
-// ...existing code...
 
 int Server::disconnect()
 {
-    try
-    {
-        close(this->_serverSd);
-        ft_log("Server socket closed", "", 1);
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr << "Error closing server socket: " << e.what() << std::endl;
-        return (-1);
-    }
+    std::cout << WARNING << "Server shutdown command received" << std::endl;
+    std::cout << WARNING << "Disconnecting clients from server..." << std::endl;
+    for (size_t i = 0; i < this->_clients.size(); ++i)
+        {
+            try
+            {
+                close(this->_clients[i].getSd());
+                std::cout
+                    << SUCCESS
+                    << this->_clients[i].getIp() << ":" << this->_clients[i].getPort() << " | "
+                    << this->_clients[i].getNickname() << " | "
+                    << this->_clients[i].getSd() << " | "
+                    << "DISCONNECTED" << std::endl;
+            }
+            catch (const std::exception &e)
+            {
+                std::cerr << ERROR << "Error closing client socket: " << e.what() << std::endl;
+            }
+        }
+        try
+        {
+            close(this->_serverSd);
+            std::cout << SUCCESS << "Server socket closed" << std::endl;
+            this->_clients.clear();
+            this->_serverSd = -1;
+            this->_newSd = -1;
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << '\n';
+        }
+        
     return (0);
 }
 
@@ -141,11 +167,9 @@ Message Server::recv(Client &client)
     else
     {
         if (errno == EWOULDBLOCK || errno == EAGAIN)
-            std::cout << "No data available on non-blocking socket" << std::endl;
-        else
-            std::cerr << "Error receiving data from client" << std::endl;
+            std::cout << INFO << "No data available on non-blocking socket" << std::endl;
     }
-    return (Message("Client", msg, std::time(0), bytesRead));
+    return (Message("Client", c_strip(msg), std::time(0), bytesRead));
 }
 
 // int Server::recv_file()
@@ -175,6 +199,20 @@ Message Server::recv(Client &client)
 bool Server::check_password(std::string password)
 {
     return (this->_password == password);
+}
+
+int Server::assign_read_mode(int listen_fd, fd_set &readfds)
+{
+    int maxfd = listen_fd;
+
+    std::vector<Client> clients = this->get_clients();
+    for (size_t i = 0; i < clients.size(); ++i)
+    {
+        int fd = clients[i].getFd();
+        FD_SET(fd, &readfds);
+        maxfd = std::max(maxfd, fd);
+    }
+    return (maxfd);
 }
 
 int Server::get_port()

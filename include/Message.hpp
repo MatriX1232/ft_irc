@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/04 12:12:56 by root              #+#    #+#             */
-/*   Updated: 2025/04/09 19:41:47 by root             ###   ########.fr       */
+/*   Updated: 2025/04/29 13:09:17 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,7 +48,7 @@ class Message
 
         void setSender(std::string sender);
         void setContent(std::string content);
-        
+
         friend std::ostream &operator<<(std::ostream &os, const Message &msg);
 };
 

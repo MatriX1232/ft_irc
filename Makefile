@@ -15,10 +15,11 @@ SRCS = \
 	src/main.cpp \
 	src/Server.cpp \
 	src/Client.cpp \
-	src/ft_logs.cpp \
 	src/Message.cpp \
-	src/utils.cpp \
 	src/Channel.cpp \
+	src/utils.cpp \
+	src/socket_utils.cpp \
+	src/ft_logs.cpp \
 	src/commands/parse_message.cpp
 
 OBJS = $(SRCS:%.cpp=%.o)
