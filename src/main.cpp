@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/13 12:28:49 by root              #+#    #+#             */
-/*   Updated: 2025/04/29 17:11:42 by root             ###   ########.fr       */
+/*   Updated: 2025/04/30 10:34:54 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -95,9 +95,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    std::cout << std::endl << std::endl;
-    std::cout << server << std::endl;
-    std::cout << std::endl << std::endl;
+    std::cout << "\n\n" << server << "\n\n";
     std::cout << channel << std::endl;
 
     return (EXIT_SUCCESS);
