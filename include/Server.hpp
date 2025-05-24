@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/08 23:47:53 by root              #+#    #+#             */
-/*   Updated: 2025/04/18 22:52:21 by root             ###   ########.fr       */
+/*   Updated: 2025/05/17 09:27:56 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,19 +33,21 @@
 #include <fstream>
 #include <poll.h>
 #include <vector>
-#include "../include/Headers.hpp"
+#include "Headers.hpp"
 #include "Message.hpp"
 #include "Client.hpp"
+#include "Channel.hpp"
 
 class Server
 {
     private:
-        int					_port;
-        int					_serverSd;
-        int					_newSd;
-        std::string			_password;
-        std::string			_serverName;
-        std::vector<Client>	_clients;
+        int					    _port;
+        int					    _serverSd;
+        int					    _newSd;
+        std::string			    _password;
+        std::string			    _serverName;
+        std::vector<Client>	    _clients;
+        std::vector<Channel>    _channels;
     
     public:
         Server(int port);
@@ -55,7 +57,7 @@ class Server
         int accept_new_client();
         // int listen(int n_clients);
         int disconnect();
-        int send(std::string msg);
+        void send(Client &client, std::string msg);
         Message recv(Client &client);
 
         int recv_file();
@@ -65,6 +67,10 @@ class Server
         int getListenFd() const;
         int getFd() const;
 		std::vector<Client> get_clients() const;
+        std::vector<Channel> get_channels() const;
+
+        void    add_channel(Channel &channel);
+        Channel &access_channel(std::string channelName);
         
         bool    check_password(std::string password);
         int     assign_read_mode(int listen_fd, fd_set &readfds);

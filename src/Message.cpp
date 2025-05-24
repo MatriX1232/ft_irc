@@ -6,22 +6,25 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/04 12:29:50 by root              #+#    #+#             */
-/*   Updated: 2025/04/15 15:29:14 by root             ###   ########.fr       */
+/*   Updated: 2025/05/03 00:15:30 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/Message.hpp"
 
-Message::Message() : _sender(""), _content(""), _timestamp(std::time(0)), _bytesRead(0)
+Message::Message() 
+    : _sender(Client()), _nickname(""), _content(""), _timestamp(std::time(0)), _bytesRead(0)
 {
     // Default constructor implementation
 }
-Message::Message(const Message &msg) : _sender(msg._sender), _content(msg._content), _timestamp(msg._timestamp), _bytesRead(msg._bytesRead)
+Message::Message(const Message &msg) 
+    : _sender(msg._sender), _nickname(msg._nickname), _content(msg._content), _timestamp(msg._timestamp), _bytesRead(msg._bytesRead)
 {
     // Copy constructor implementation
 }
 
-Message::Message(std::string sender, std::string content, std::time_t timestamp, int bytesRead) : _sender(sender), _content(content), _timestamp(timestamp), _bytesRead(bytesRead)
+Message::Message(Client sender, std::string nickname, std::string content, std::time_t timestamp, int bytesRead) 
+    : _sender(sender), _nickname(nickname), _content(content), _timestamp(timestamp), _bytesRead(bytesRead)
 {
     // Parameterized constructor implementation
 }
@@ -31,9 +34,14 @@ Message::~Message()
     // Destructor implementation
 }
 
-std::string Message::getSender() const
+Client &Message::getSender()
 {
     return _sender;
+}
+
+std::string Message::getNickname() const
+{
+    return _nickname;
 }
 
 std::string Message::getContent() const
@@ -51,7 +59,7 @@ int Message::getBytesRead() const
     return _bytesRead;
 }
 
-void Message::setSender(std::string sender)
+void Message::setSender(Client &sender)
 {
     _sender = sender;
 }
@@ -68,7 +76,7 @@ std::ostream& operator<<(std::ostream &os, const Message &msg)
     os << CYAN;
     os << "<" << strTime;
     os << BOLD;
-    os << " | " << msg.getSender() << " | ";
+    os << " | " << msg.getNickname() << " | ";
     os << END << CYAN;
     os << msg.getBytesRead() << " [bytes]" << ">  ";
     os << END;

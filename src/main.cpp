@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/13 12:28:49 by root              #+#    #+#             */
-/*   Updated: 2025/04/30 10:34:54 by root             ###   ########.fr       */
+/*   Updated: 2025/05/17 10:08:06 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,10 +51,13 @@ int main(int argc, char *argv[])
     int flags = fcntl(listen_fd, F_GETFL, 0);
     fcntl(listen_fd, F_SETFL, flags | O_NONBLOCK);
 
-    std::vector<Channel> channels;
     Channel channel("general", "General channel for chatting", argv[2]);
-
-
+    Channel channel2("random", "Random channel for chatting", argv[2]);
+    Channel channel3("private", "Private channel for chatting", argv[2]);
+    
+    server.add_channel(channel);
+    server.add_channel(channel2);
+    server.add_channel(channel3);
 
     // 2) multiplex accept + recv
     while (true)
@@ -75,22 +78,26 @@ int main(int argc, char *argv[])
                 std::cerr << ERROR << "Error accepting new client" << std::endl;
         }
 
-        // data on existing clients?
-        std::vector<Client> clients = server.get_clients();
-        for (size_t i = 0; i < clients.size(); ++i)
+        std::vector<Channel> channels = server.get_channels();
+        for (size_t i = 0; i < channels.size(); i++)
         {
-            if (FD_ISSET(clients[i].getFd(), &readfds))
+            // data on existing clients?
+            std::vector<Client> clients = channels[i].getClients();
+            for (size_t i = 0; i < clients.size(); ++i)
             {
-                Message msg = server.recv(clients[i]);
-                if (!msg.isValid())
-                    continue;
-                if (msg.getContent() == SERVER_SHUTDOWN)
+                if (FD_ISSET(clients[i].getFd(), &readfds))
                 {
-                    server.disconnect();
-                    break;
+                    Message msg = server.recv(clients[i]);
+                    if (!msg.isValid())
+                        continue;
+                    if (msg.getContent() == SERVER_SHUTDOWN)
+                    {
+                        server.disconnect();
+                        break;
+                    }
+                    std::cout << msg << std::endl;
+                    parse_message(server, msg);
                 }
-                std::cout << msg << std::endl;
-                channel.addMessage(msg);
             }
         }
     }

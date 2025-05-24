@@ -6,11 +6,16 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/09 19:43:32 by root              #+#    #+#             */
-/*   Updated: 2025/04/29 17:12:07 by root             ###   ########.fr       */
+/*   Updated: 2025/05/17 10:24:06 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/Channel.hpp"
+
+Channel::Channel() : _name(""), _topic(""), _password("")
+{
+    
+}
 
 Channel::Channel(std::string name, std::string topic, std::string password) : _name(name), _topic(topic), _password(password)
 {
@@ -21,6 +26,28 @@ Channel::~Channel()
 {
     // Destructor implementation
 }
+
+void Channel::addClient(Client client)
+{
+    _clients.push_back(client);
+}
+void Channel::removeClient(Client client)
+{
+    for (size_t i = 0; i < _clients.size(); ++i)
+    {
+        if (_clients[i].getSd() == client.getSd())
+        {
+            _clients.erase(_clients.begin() + i);
+            break;
+        }
+    }
+}
+
+std::vector<Client> Channel::getClients()
+{
+    return _clients;
+}
+
 void Channel::addMessage(Message msg)
 {
     _messages.push_back(msg);
@@ -37,6 +64,16 @@ void Channel::displayMessages()
 void Channel::clearMessages()
 {
     _messages.clear();
+}
+
+std::string Channel::getName() const
+{
+    return _name;
+}
+
+std::string Channel::getTopic() const
+{
+    return _topic;
 }
 
 std::vector<Message> Channel::getMessages()
@@ -57,7 +94,7 @@ std::vector<Message> Channel::getMessageByUser(std::string userName)
     for (int i = 0; i < (int)_messages.size(); i++)
     {
         Message msg = _messages[i];
-        if (msg.getSender() == userName)
+        if (msg.getSender().getNickname() == userName)
             result.push_back(msg);
     }
     return result;

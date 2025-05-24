@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/04 12:12:56 by root              #+#    #+#             */
-/*   Updated: 2025/04/29 13:09:17 by root             ###   ########.fr       */
+/*   Updated: 2025/05/17 17:06:19 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,18 +22,20 @@
 #include <string.h>
 #include <time.h>
 #include "../include/Headers.hpp"
+#include "../include/Client.hpp"
 
 class Message
 {
     private:
-        std::string _sender;
+        Client      _sender;
+        std::string _nickname;
         std::string _content;
         std::time_t _timestamp;
         int         _bytesRead;
 
     public:
         Message();
-        Message(std::string sender, std::string content, std::time_t timestamp = std::time(0), int bytesRead = 0);
+        Message(Client sender, std::string nickname, std::string content, std::time_t timestamp = std::time(0), int bytesRead = 0);
         Message(const Message &msg);
         ~Message();
         Message &operator=(const Message &msg);
@@ -41,12 +43,13 @@ class Message
         bool    isValid() const;
         bool    isEmpty() const;
 
-        std::string getSender() const;
+        Client      &getSender();
+        std::string getNickname() const;
         std::string getContent() const;
         std::time_t getTimestamp() const;
         int         getBytesRead() const;
 
-        void setSender(std::string sender);
+        void setSender(Client &sender);
         void setContent(std::string content);
 
         friend std::ostream &operator<<(std::ostream &os, const Message &msg);

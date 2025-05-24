@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 15:06:38 by root              #+#    #+#             */
-/*   Updated: 2025/04/18 22:50:48 by root             ###   ########.fr       */
+/*   Updated: 2025/05/24 21:03:05 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,6 +78,11 @@ int Client::getFd() const
     return this->_clientSd;
 }
 
+std::string Client::getCurrentChannel()
+{
+    return this->_currentChannel;
+}
+
 bool Client::isAuthenticated() const
 {
     return this->_authenticated;
@@ -106,6 +111,18 @@ void Client::setIp(std::string ip)
 void Client::setPort(int port)
 {
     this->_port = port;
+}
+
+void Client::setCurrentChannel(std::string channel)
+{
+    this->_currentChannel = channel;
+}
+bool operator==(const Client &scr, const Client &other)
+{
+    return (scr.getSd() == other.getSd() &&
+            scr.getIp() == other.getIp() &&
+            scr.getPort() == other.getPort() &&
+            scr.getNickname() == other.getNickname());
 }
 
 std::ostream &operator<<(std::ostream& os, const Client& client)

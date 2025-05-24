@@ -6,13 +6,15 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/09 11:02:26 by root              #+#    #+#             */
-/*   Updated: 2025/04/29 17:00:05 by root             ###   ########.fr       */
+/*   Updated: 2025/05/18 14:49:05 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/utils.hpp"
 #include "../include/Server.hpp"
 #include "../include/Client.hpp"
+#include "../include/Message.hpp"
+#include "../include/Channel.hpp"
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -114,6 +116,7 @@ int Server::accept_new_client()
             "SD: " << newSd << " | " <<
             "IP: " << ip << " | " <<
             "PORT: " << port << std::endl;
+        this->_channels[0].addClient(newClient);
     }
     return 0;
 }
@@ -122,11 +125,13 @@ int Server::disconnect()
 {
     std::cout << WARNING << "Server shutdown command received" << std::endl;
     std::cout << WARNING << "Disconnecting clients from server..." << std::endl;
+    std::vector<Client> _clients = this->get_clients();
     for (size_t i = 0; i < this->_clients.size(); ++i)
         {
             try
             {
-                close(this->_clients[i].getSd());
+                this->send(_clients[i], "DISCONNECTED");
+                close(_clients[i].getSd());
                 std::cout
                     << SUCCESS
                     << this->_clients[i].getIp() << ":" << this->_clients[i].getPort() << " | "
@@ -155,6 +160,18 @@ int Server::disconnect()
     return (0);
 }
 
+void    Server::send(Client &client, std::string msg)
+{
+    if (msg == "DISCONNECTED")
+    {
+        std::cout << INFO << "Client disconnected" << std::endl;
+        return;
+    }
+    int bytesSent = ::send(client.getSd(), msg.c_str(), msg.length(), 0);
+    if (bytesSent < 0)
+        std::cerr << ERROR << "Error sending message to client: " << strerror(errno) << std::endl;
+}
+
 Message Server::recv(Client &client)
 {
     char msg[150];
@@ -169,7 +186,7 @@ Message Server::recv(Client &client)
         if (errno == EWOULDBLOCK || errno == EAGAIN)
             std::cout << INFO << "No data available on non-blocking socket" << std::endl;
     }
-    return (Message("Client", c_strip(msg), std::time(0), bytesRead));
+    return (Message(client, "SomeNickname", c_strip(msg), std::time(0), bytesRead));
 }
 
 // int Server::recv_file()
@@ -215,6 +232,25 @@ int Server::assign_read_mode(int listen_fd, fd_set &readfds)
     return (maxfd);
 }
 
+Channel &Server::access_channel(std::string channelName)
+{
+    for (size_t i = 0; i < this->_channels.size(); ++i)
+    {
+        if (this->_channels[i].getName() == channelName)
+        {
+            std::cout << INFO << "Channel found: <" << this->_channels[i].getName() << ">" << std::endl;
+            return this->_channels[i];
+        }
+    }
+    std::cout << ERROR << "Channel not found: <" << channelName << ">" << std::endl;
+    throw std::runtime_error("Channel not found");
+}
+
+void    Server::add_channel(Channel &channel)
+{
+    this->_channels.push_back(channel);
+}
+
 int Server::get_port()
 {
     return this->_port;
@@ -238,6 +274,11 @@ int Server::getFd() const
 std::vector<Client> Server::get_clients() const
 {
     return this->_clients;
+}
+
+std::vector<Channel> Server::get_channels() const
+{
+    return this->_channels;
 }
 
 std::ostream &operator<<(std::ostream &os, const Server &server)
