@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/09 11:02:26 by root              #+#    #+#             */
-/*   Updated: 2025/05/18 14:49:05 by root             ###   ########.fr       */
+/*   Updated: 2025/06/04 14:41:57 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -109,6 +109,7 @@ int Server::accept_new_client()
         std::string ip = inet_ntoa(newSockAddr.sin_addr);
         int port = ntohs(newSockAddr.sin_port);
         Client newClient(newSd, ip, port);
+        newClient.setCurrentChannel(this->_channels[0].getName()); // Default channel
         this->_clients.push_back(newClient);
         std::cout <<
             INFO <<
@@ -239,7 +240,7 @@ Channel &Server::access_channel(std::string channelName)
         if (this->_channels[i].getName() == channelName)
         {
             std::cout << INFO << "Channel found: <" << this->_channels[i].getName() << ">" << std::endl;
-            return this->_channels[i];
+            return (this->_channels[i]);
         }
     }
     std::cout << ERROR << "Channel not found: <" << channelName << ">" << std::endl;

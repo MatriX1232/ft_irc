@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   parse_message.cpp                                  :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/01 14:58:46 by root              #+#    #+#             */
-/*   Updated: 2025/05/24 22:39:21 by root             ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include <iostream>
 #include <string>
 #include <vector>
@@ -51,45 +39,52 @@ void parse_message(Server &server, Message &msg)
             return;
         }
 
-        try
-        {
-            // Get the client's current channel
-            std::string currentChannel = msg.getSender().getCurrentChannel();
+        std::string channelName = arg_vector[0];
+        Client &client = msg.getSender();
+        std::string currentChannelName = client.getCurrentChannel();
 
-            // If the client is already in a channel, remove them from it
-            if (!currentChannel.empty()) {
-                server.access_channel(currentChannel).removeClient(msg.getSender());
-                std::cout << INFO << "Client " << msg.getSender().getNickname() 
-                          << " removed from channel " << currentChannel << std::endl;
+
+        std::cout << "\n\n" << WARNING << "Current channel: " << currentChannelName << std::endl;
+        std::cout << WARNING << "Joining channel: " << channelName << std::endl;
+
+        try {
+            // If client is already in a channel, remove them from it
+            if (!currentChannelName.empty() && currentChannelName != channelName) {
+                Channel &oldChannel = server.access_channel(currentChannelName);
+                oldChannel.removeClient(client);
+                std::cout << INFO << "Client " << client.getNickname() << " left channel " << currentChannelName << std::endl;
             }
 
-            // Add the client to the new channel
-            Channel &newChannel = server.access_channel(arg_vector[0]);
-            std::vector<Client> clients = newChannel.getClients();
+            // Join the new channel
+            Channel &newChannel = server.access_channel(channelName);
+            // Check if client is already in the target channel
             bool alreadyInChannel = false;
-            for (size_t i = 0; i < clients.size(); ++i) {
-                if (clients[i] == msg.getSender()) {
+            std::vector<Client> clientsInNewChannel = newChannel.getClients();
+            for (size_t i = 0; i < clientsInNewChannel.size(); ++i) {
+                if (clientsInNewChannel[i].getSd() == client.getSd()) {
                     alreadyInChannel = true;
                     break;
                 }
             }
-            if (alreadyInChannel) {
-                std::cerr << WARNING << "Client " << msg.getSender().getNickname() 
-                          << " is already in channel " << arg_vector[0] << std::endl;
-                return;
+
+            if (!alreadyInChannel) {
+                newChannel.addClient(client);
+                std::cout << ERROR << "Before entering function: " << channelName << std::endl;
+                client.setCurrentChannel(channelName);
+                std::cout << INFO << "Client " << client.getNickname() << " joined channel " << channelName << std::endl;
+                
+                // You might want to send a confirmation message to the client here
+                // server.send(client, "You have joined " + channelName);
+                // And notify other clients in the channel
+                // newChannel.broadcastMessage(client.getNickname() + " has joined the channel.", client);
+            } else {
+                std::cout << INFO << "Client " << client.getNickname() << " is already in channel " << channelName << std::endl;
             }
-            newChannel.addClient(msg.getSender());
 
-            // Update the client's current channel
-            msg.getSender().setCurrentChannel(arg_vector[0]);
-
-            std::cout << INFO << "Client " << msg.getSender().getNickname() 
-                      << " joined channel " << arg_vector[0] << std::endl;
-        }
-        catch (const std::exception &e)
-        {
+        } catch (const std::runtime_error& e) {
             std::cerr << ERROR << "Error joining channel: " << e.what() << std::endl;
-            return;
+            // Optionally, send an error message back to the client
+            // server.send(client, "ERROR :Could not join channel " + channelName + ". " + e.what());
         }
     }
     else if (command == "LIST")

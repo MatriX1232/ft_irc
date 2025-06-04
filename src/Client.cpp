@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 15:06:38 by root              #+#    #+#             */
-/*   Updated: 2025/05/24 21:03:05 by root             ###   ########.fr       */
+/*   Updated: 2025/06/04 14:41:53 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -116,6 +116,7 @@ void Client::setPort(int port)
 void Client::setCurrentChannel(std::string channel)
 {
     this->_currentChannel = channel;
+    std::cout << INFO << "Current channel set to: " << channel << std::endl;
 }
 bool operator==(const Client &scr, const Client &other)
 {

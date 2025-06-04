@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/13 12:28:49 by root              #+#    #+#             */
-/*   Updated: 2025/05/17 10:08:06 by root             ###   ########.fr       */
+/*   Updated: 2025/06/04 14:50:01 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,7 @@ std::vector<Message>    check_for_new_messages(Server &server)
     {
         Message msg = server.recv(_clients[i]);
         std::cout << "recv non-blocking" << std::endl;
-        if (msg.isValid())
+        if (msg.isValid())  
             _newMessages.push_back(msg);
     }
     return (_newMessages);
@@ -92,6 +92,7 @@ int main(int argc, char *argv[])
                         continue;
                     if (msg.getContent() == SERVER_SHUTDOWN)
                     {
+                        std::cout << "\n\n" << server << "\n\n";
                         server.disconnect();
                         break;
                     }
@@ -102,8 +103,10 @@ int main(int argc, char *argv[])
         }
     }
 
-    std::cout << "\n\n" << server << "\n\n";
-    std::cout << channel << std::endl;
+    for (int i = 0; i < (int)server.get_channels().size(); i++)
+    {
+        std::cout << server.get_channels()[i] << std::endl;
+    }
 
     return (EXIT_SUCCESS);
 }

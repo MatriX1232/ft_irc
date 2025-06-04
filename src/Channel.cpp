@@ -6,11 +6,12 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/09 19:43:32 by root              #+#    #+#             */
-/*   Updated: 2025/05/17 10:24:06 by root             ###   ########.fr       */
+/*   Updated: 2025/06/02 13:45:49 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/Channel.hpp"
+#include <algorithm> // Required for std::remove_if
 
 Channel::Channel() : _name(""), _topic(""), _password("")
 {
@@ -38,9 +39,11 @@ void Channel::removeClient(Client client)
         if (_clients[i].getSd() == client.getSd())
         {
             _clients.erase(_clients.begin() + i);
-            break;
+            std::cout << INFO << "Client removed from channel: " << _name << std::endl;
+            return;
         }
     }
+    std::cerr << WARNING << "Client not found in channel: " << _name << std::endl;
 }
 
 std::vector<Client> Channel::getClients()
