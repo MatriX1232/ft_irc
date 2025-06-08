@@ -60,12 +60,12 @@ class Client
 		
 		bool	isAuthenticated() const;
 		
-		void setNickname(std::string nickname);
+		void setNickname(const std::string& nickname);
 		void setAuthenticated(bool authenticated);
 		void setSd(int sd);
-		void setIp(std::string ip);
+		void setIp(const std::string& ip);
 		void setPort(int port);
-		void setCurrentChannel(std::string channel);
+		void setCurrentChannel(const std::string& channel);
 		bool    isEmpty();
 		
 		friend std::ostream &operator<<(std::ostream& os, const Client& client);

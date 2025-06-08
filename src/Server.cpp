@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/09 11:02:26 by root              #+#    #+#             */
-/*   Updated: 2025/06/04 14:41:57 by root             ###   ########.fr       */
+/*   Updated: 2025/06/08 15:23:53 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -118,8 +118,75 @@ int Server::accept_new_client()
             "IP: " << ip << " | " <<
             "PORT: " << port << std::endl;
         this->_channels[0].addClient(newClient);
+        this->retrieve_initial_info(newClient);
     }
     return 0;
+}
+
+void Server::retrieve_initial_info(Client &client)
+{
+    const Message msg = this->recv(client);
+    const std::string content = msg.getContent();
+    const std::string command = content.substr(0, content.find(' '));
+    const std::string args = content.substr(content.find(' ') + 1);
+    const std::vector<std::string> arg_vector = split(args, ' ');
+
+    if (arg_vector.empty())
+    {
+        std::cerr << ERROR << "No arguments provided" << std::endl;
+        return;
+    }
+    if (msg.isEmpty())
+    {
+        std::cerr << ERROR << "Empty message received" << std::endl;
+        return;
+    }
+
+    if (command == "PASS")
+    {
+        std::cout << WARNING << "Password: " << arg_vector[0] << std::endl;
+        if (this->check_password(arg_vector[0]))
+        {
+            client.setAuthenticated(true);
+            std::cout << SUCCESS << "Client authenticated successfully" << std::endl;
+            this->send(client, "AUTHENTICATED");
+        }
+        else
+        {
+            std::cerr << ERROR << "Authentication failed for client: " << client.getIp() << ":" << client.getPort() << std::endl;
+            this->send(client, "AUTHENTICATION FAILED");
+            close(client.getSd());
+            return;
+        }
+    }
+    
+    else if (command == "NICK")
+    {
+        if (arg_vector.size() < 1 || arg_vector[0].empty())
+        {
+            std::cerr << ERROR << "NICK command requires a valid nickname" << std::endl;
+            return;
+        }
+        client.setNickname(arg_vector[0]);
+        std::cout << INFO << "Client nickname set to: " << client.getNickname() << std::endl;
+        this->send(client, "NICKNAME SET");
+    }
+
+    else if (command == "USER")
+    {
+        if (arg_vector.size() < 1 || arg_vector[0].empty())
+        {
+            std::cerr << ERROR << "USER command requires a valid username" << std::endl;
+            return;
+        }
+        client.setNickname(arg_vector[0]);
+        std::cout << INFO << "Client username set to: " << client.getNickname() << std::endl;
+        this->send(client, "USERNAME SET");
+    }
+    else
+    {
+        std::cerr << ERROR << "Unknown command: " << command << std::endl;
+    }
 }
 
 int Server::disconnect()
@@ -277,7 +344,7 @@ std::vector<Client> Server::get_clients() const
     return this->_clients;
 }
 
-std::vector<Channel> Server::get_channels() const
+std::vector<Channel> &Server::get_channels()
 {
     return this->_channels;
 }

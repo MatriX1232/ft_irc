@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/08 23:47:53 by root              #+#    #+#             */
-/*   Updated: 2025/06/04 14:50:18 by root             ###   ########.fr       */
+/*   Updated: 2025/06/08 14:59:22 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,6 +48,8 @@ class Server
         std::string			    _serverName;
         std::vector<Client>	    _clients;
         std::vector<Channel>    _channels;
+
+        void    retrieve_initial_info(Client &client);
     
     public:
         Server(int port);
@@ -67,7 +69,7 @@ class Server
         int getListenFd() const;
         int getFd() const;
 		std::vector<Client> get_clients() const;
-        std::vector<Channel> get_channels() const;
+        std::vector<Channel> &get_channels();
 
         void    add_channel(Channel &channel);
         Channel &access_channel(std::string channelName);

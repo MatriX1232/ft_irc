@@ -20,7 +20,7 @@ Client::Client(int sd, std::string ip, int port) : _clientSd(sd), _ip(ip), _port
     std::cout << "Created new CLIENT" << std::endl;
 }
 
-Client::Client() : _clientSd(-1), _ip(""), _port(0), _authenticated(false)
+Client::Client() : _clientSd(-1), _port(0), _authenticated(false)
 {
     std::cout << "Created new CLIENT" << std::endl;
 }
@@ -39,6 +39,7 @@ Client& Client::operator=(const Client& other)
         this->_port = other._port;
         this->_nickname = other._nickname;
         this->_authenticated = other._authenticated;
+        this->_currentChannel = other._currentChannel;
     }
     return *this;
 }
@@ -88,22 +89,22 @@ bool Client::isAuthenticated() const
     return this->_authenticated;
 }
 
-void Client::setNickname(std::string nickname)
+void Client::setNickname(const std::string& nickname)
 {
     this->_nickname = nickname;
 }
 
-void Client::setAuthenticated(bool authenticated)
+void Client::setAuthenticated(const bool authenticated)
 {
     this->_authenticated = authenticated;
 }
 
-void Client::setSd(int sd)
+void Client::setSd(const int sd)
 {
     this->_clientSd = sd;
 }
 
-void Client::setIp(std::string ip)
+void Client::setIp(const std::string& ip)
 {
     this->_ip = ip;
 }
@@ -113,7 +114,7 @@ void Client::setPort(int port)
     this->_port = port;
 }
 
-void Client::setCurrentChannel(std::string channel)
+void Client::setCurrentChannel(const std::string& channel)
 {
     this->_currentChannel = channel;
     std::cout << INFO << "Current channel set to: " << channel << std::endl;

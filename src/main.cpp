@@ -24,7 +24,7 @@ std::vector<Message>    check_for_new_messages(Server &server)
     std::vector<Message>    _newMessages;
     std::vector<Client>     _clients = server.get_clients();
 
-    for(int i = 0; i < (int)_clients.size(); i++)
+    for (int i = 0; i < (int)_clients.size(); i++)
     {
         Message msg = server.recv(_clients[i]);
         std::cout << "recv non-blocking" << std::endl;
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 
         maxfd = server.assign_read_mode(listen_fd, readfds);
         if (wait_for_activity(maxfd, readfds) == -1)
-            break;
+        break;
 
         // new connection?
         if (FD_ISSET(listen_fd, &readfds))
@@ -78,16 +78,16 @@ int main(int argc, char *argv[])
                 std::cerr << ERROR << "Error accepting new client" << std::endl;
         }
 
-        std::vector<Channel> channels = server.get_channels();
+        std::vector<Channel> &channels = server.get_channels();
         for (size_t i = 0; i < channels.size(); i++)
         {
             // data on existing clients?
             std::vector<Client> clients = channels[i].getClients();
-            for (size_t i = 0; i < clients.size(); ++i)
+            for (size_t j = 0; j < clients.size(); ++j)
             {
-                if (FD_ISSET(clients[i].getFd(), &readfds))
+                if (FD_ISSET(clients[j].getFd(), &readfds))
                 {
-                    Message msg = server.recv(clients[i]);
+                    Message msg = server.recv(clients[j]);
                     if (!msg.isValid())
                         continue;
                     if (msg.getContent() == SERVER_SHUTDOWN)

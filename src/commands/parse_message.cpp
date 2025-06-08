@@ -12,10 +12,10 @@
 
 void parse_message(Server &server, Message &msg)
 {
-    std::string content = msg.getContent();
-    std::string command = content.substr(0, content.find(" "));
-    std::string args = content.substr(content.find(" ") + 1);
-    std::vector<std::string> arg_vector = split(args, ' ');
+    const std::string content = msg.getContent();
+    const std::string command = content.substr(0, content.find(' '));
+    const std::string args = content.substr(content.find(' ') + 1);
+    const std::vector<std::string> arg_vector = split(args, ' ');
 
     if (arg_vector.empty())
     {
@@ -39,9 +39,9 @@ void parse_message(Server &server, Message &msg)
             return;
         }
 
-        std::string channelName = arg_vector[0];
+        const std::string& channelName = arg_vector[0];
         Client &client = msg.getSender();
-        std::string currentChannelName = client.getCurrentChannel();
+        const std::string currentChannelName = client.getCurrentChannel();
 
 
         std::cout << "\n\n" << WARNING << "Current channel: " << currentChannelName << std::endl;

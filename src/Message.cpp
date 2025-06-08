@@ -23,7 +23,7 @@ Message::Message(const Message &msg)
     // Copy constructor implementation
 }
 
-Message::Message(Client sender, std::string nickname, std::string content, std::time_t timestamp, int bytesRead) 
+Message::Message(Client sender, std::string nickname, const std::string& content, std::time_t timestamp, int bytesRead)
     : _sender(sender), _nickname(nickname), _content(content), _timestamp(timestamp), _bytesRead(bytesRead)
 {
     // Parameterized constructor implementation
