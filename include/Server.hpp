@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/08 23:47:53 by root              #+#    #+#             */
-/*   Updated: 2025/06/08 14:59:22 by root             ###   ########.fr       */
+/*   Updated: 2025/06/15 12:25:49 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,6 +64,7 @@ class Server
 
         int recv_file();
 
+        std::string get_password() const;
         int get_port();
         int get_serverSd();
         int getListenFd() const;

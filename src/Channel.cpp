@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/09 19:43:32 by root              #+#    #+#             */
-/*   Updated: 2025/06/02 13:45:49 by root             ###   ########.fr       */
+/*   Updated: 2025/06/15 13:12:36 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -115,6 +115,11 @@ std::vector<Message> Channel::getMessageByContent(std::string messageContentFrag
             result.push_back(msg);
     }
     return result;
+}
+
+bool Channel::check_password(const std::string password) const
+{
+    return _password == password;
 }
 
 std::ostream &operator<<(std::ostream &os, const Channel &channel)

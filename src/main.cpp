@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/13 12:28:49 by root              #+#    #+#             */
-/*   Updated: 2025/06/04 14:50:01 by root             ###   ########.fr       */
+/*   Updated: 2025/06/08 15:27:09 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -76,6 +76,14 @@ int main(int argc, char *argv[])
         {
             if (server.accept_new_client() < 0)
                 std::cerr << ERROR << "Error accepting new client" << std::endl;
+            else
+            {
+                Client &newClient = server.get_clients().back();
+                server.send(newClient, ":server 001 " + newClient.getNickname() + " :Welcome to the IRC server");
+                server.send(newClient, ":server 002 " + newClient.getNickname() + " :Your host is server, running version 1.0");
+                server.send(newClient, ":server 003 " + newClient.getNickname() + " :This server was created today");
+                server.send(newClient, ":server 004 " + newClient.getNickname() + " server 1.0 o o");
+            }
         }
 
         std::vector<Channel> &channels = server.get_channels();

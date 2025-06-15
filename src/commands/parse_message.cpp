@@ -30,7 +30,18 @@ void parse_message(Server &server, Message &msg)
 
     if (command == "PASS")
     {
-        std::cout << WARNING << "Password: " << arg_vector[0] << std::endl;
+        Channel &channel = server.access_channel(msg.getSender().getCurrentChannel());
+        if (channel.check_password(arg_vector[0]))
+        {
+            msg.getSender().setAuthenticated(true);
+            std::cout << SUCCESS << "Password accepted for client: " << msg.getSender().getFd() << std::endl;
+        }
+        else
+        {
+            std::cerr << ERROR << "Incorrect password for client: " << msg.getSender().getNickname() << std::endl;
+            close(msg.getSender().getSd());
+            return;
+        }
     }
     else if (command == "JOIN")
     {
@@ -96,6 +107,12 @@ void parse_message(Server &server, Message &msg)
             int clientCount = channels[i].getClients().size();
             std::cout << channels[i].getName() << " | Clients: " << clientCount << " | Topic: " << channels[i].getTopic() << std::endl;
         }
+    }
+    else if (command == "PING")
+    {
+        Client &client = msg.getSender();
+        server.send(client, "PONG :" + args);
+        std::cout << INFO << "Responded to PING with PONG" << std::endl;
     }
     else
     {

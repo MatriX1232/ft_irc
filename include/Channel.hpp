@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/03 00:29:45 by root              #+#    #+#             */
-/*   Updated: 2025/05/17 10:30:57 by root             ###   ########.fr       */
+/*   Updated: 2025/06/15 13:11:00 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,8 @@ class Channel
         Channel();
         Channel(std::string name = "", std::string topic = "", std::string password = "");
         ~Channel();
+
+        bool check_password(const std::string password) const;
 
         void addMessage(Message msg);
         void addClient(Client client);
