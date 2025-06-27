@@ -40,3 +40,13 @@ std::string append_number(const std::string &str, int number)
     ss << str << number;
     return ss.str();
 }
+
+std::string get_current_timestamp()
+{
+    time_t now = time(0);
+    struct tm tstruct;
+    char buf[80];
+    tstruct = *localtime(&now);
+    strftime(buf, sizeof(buf), "%Y-%m-%d %X", &tstruct);
+    return buf;
+}

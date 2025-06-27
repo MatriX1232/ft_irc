@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/13 11:56:28 by root              #+#    #+#             */
-/*   Updated: 2025/06/27 15:37:03 by root             ###   ########.fr       */
+/*   Updated: 2025/06/27 16:23:07 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,4 +31,6 @@ int    wait_for_activity(int maxfd, fd_set &readfds);
 
 // string utils
 std::string append_number(const std::string &str, int number);
+std::string get_current_timestamp();
+
 #endif

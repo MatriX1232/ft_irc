@@ -111,13 +111,27 @@ void parse_message(Server &server, Message &msg)
                 std::cout << ERROR << "Before entering function: " << channelName << std::endl;
                 client.setCurrentChannel(channelName);
                 std::cout << INFO << "Client " << client.getNickname() << " joined channel " << channelName << std::endl;
-                
-                // You might want to send a confirmation message to the client here
-                // server.send(client, "You have joined " + channelName);
-                // And notify other clients in the channel
+
+                // Send server responses
+                server.send(client, ":server 332 " + client.getNickname() + " #" + channelName + " :" + newChannel.getTopic() + "\n");
+                server.send(client, ":server 333 " + client.getNickname() + " #" + channelName + " " + client.getNickname() + " " + get_current_timestamp() + "\n");
+
+                // List users in the channel
+                std::string userList = client.getNickname();
+                std::vector<Client> clientsInChannel = newChannel.getClients();
+                for (size_t i = 0; i < clientsInChannel.size(); ++i) {
+                    if (clientsInChannel[i].getNickname() != client.getNickname()) {
+                        userList += " " + clientsInChannel[i].getNickname();
+                    }
+                }
+                server.send(client, ":server 353 " + client.getNickname() + " = #" + channelName + " :" + userList + "\n");
+                server.send(client, ":server 366 " + client.getNickname() + " #" + channelName + " :End of /NAMES list\n");
+
+                // Notify other clients in the channel
                 // newChannel.broadcastMessage(client.getNickname() + " has joined the channel.", client);
             } else {
                 std::cout << INFO << "Client " << client.getNickname() << " is already in channel " << channelName << std::endl;
+                server.send(client, ":server 331 " + client.getNickname() + " #" + channelName + " :You are already in this channel\n");
             }
 
         } catch (const std::runtime_error& e) {
