@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 #include <cstring>
+#include <sstream>
+#include <string>
 #include "../include/utils.hpp"
 
 std::vector<std::string> split(const std::string &str, char delimiter)
@@ -30,4 +32,11 @@ std::string c_strip(char *str)
         end--;
     *(end + 1) = '\0';
     return str;
+}
+
+std::string append_number(const std::string &str, int number)
+{
+    std::stringstream ss;
+    ss << str << number;
+    return ss.str();
 }

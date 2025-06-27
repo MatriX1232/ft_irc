@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/13 11:56:28 by root              #+#    #+#             */
-/*   Updated: 2025/04/29 16:55:37 by root             ###   ########.fr       */
+/*   Updated: 2025/06/27 15:37:03 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,4 +29,6 @@ std::string c_strip(char *str);
 // socket utils
 int    wait_for_activity(int maxfd, fd_set &readfds);
 
+// string utils
+std::string append_number(const std::string &str, int number);
 #endif

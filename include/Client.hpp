@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/08 23:47:53 by root              #+#    #+#             */
-/*   Updated: 2025/05/24 21:03:37 by root             ###   ########.fr       */
+/*   Updated: 2025/06/16 11:30:14 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,10 +39,12 @@ class Client
 		std::string     _ip;
 		int             _port;
 		char            _msg[150];
-		std::string     _nickname;
 		bool            _authenticated;
 		std::string		_currentChannel;
-	
+		std::string     _nickname;
+		std::string		_realName;
+		std::string		_username;
+
 	public:
 		Client();
 		Client(int sd, std::string ip, int port);
@@ -53,21 +55,25 @@ class Client
 		int         getSd() const;
 		std::string getIp() const;
 		int         getPort() const;
-		std::string getNickname() const;
 		int			getListenFd() const;
 		int			getFd() const;
 		std::string getCurrentChannel();
-		
+		std::string getNickname() const;
+		std::string getRealName() const;
+		std::string getUsername() const;
+
 		bool	isAuthenticated() const;
 		
-		void setNickname(const std::string& nickname);
-		void setAuthenticated(bool authenticated);
-		void setSd(int sd);
-		void setIp(const std::string& ip);
-		void setPort(int port);
-		void setCurrentChannel(const std::string& channel);
-		bool    isEmpty();
-		
+		void	setRealName(const std::string& realName);
+		void	setUsername(const std::string& username);
+		void	setNickname(const std::string& nickname);
+		void	setAuthenticated(bool authenticated);
+		void	setSd(int sd);
+		void	setIp(const std::string& ip);
+		void	setPort(int port);
+		void	setCurrentChannel(const std::string& channel);
+		bool	isEmpty();
+
 		friend std::ostream &operator<<(std::ostream& os, const Client& client);
 		friend bool operator==(const Client &scr, const Client &other);
 };

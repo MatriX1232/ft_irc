@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 15:06:38 by root              #+#    #+#             */
-/*   Updated: 2025/06/08 15:55:37 by root             ###   ########.fr       */
+/*   Updated: 2025/06/16 11:39:02 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,9 +37,11 @@ Client& Client::operator=(const Client& other)
         this->_clientSd = other._clientSd;
         this->_ip = other._ip;
         this->_port = other._port;
-        this->_nickname = other._nickname;
         this->_authenticated = other._authenticated;
         this->_currentChannel = other._currentChannel;
+        this->_nickname = other._nickname;
+        this->_realName = other._realName;
+        this->_username = other._username;
     }
     return *this;
 }
@@ -62,6 +64,16 @@ std::string Client::getIp() const
 int Client::getPort() const
 {
     return this->_port;
+}
+
+std::string Client::getRealName() const
+{
+    return this->_realName;
+}
+
+std::string Client::getUsername() const
+{
+    return this->_username;
 }
 
 std::string Client::getNickname() const
@@ -92,6 +104,16 @@ bool Client::isAuthenticated() const
 void Client::setNickname(const std::string& nickname)
 {
     this->_nickname = nickname;
+}
+
+void Client::setRealName(const std::string& realName)
+{
+    this->_realName = realName;
+}
+
+void Client::setUsername(const std::string& username)
+{
+    this->_username = username;
 }
 
 void Client::setAuthenticated(const bool authenticated)

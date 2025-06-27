@@ -31,6 +31,7 @@ void parse_message(Server &server, Message &msg)
     if (command == "PASS")
     {
         Channel &channel = server.access_channel(msg.getSender().getCurrentChannel());
+
         if (channel.check_password(arg_vector[0]))
         {
             msg.getSender().setAuthenticated(true);
@@ -42,6 +43,33 @@ void parse_message(Server &server, Message &msg)
             close(msg.getSender().getSd());
             return;
         }
+    }
+    else if (command == "NICK")
+    {
+        if (arg_vector.empty() || arg_vector[0].empty()) {
+            std::cerr << ERROR << "NICK command requires a valid nickname" << std::endl;
+            return;
+        }
+
+        Client &client = msg.getSender();
+        const std::string newNickname = arg_vector[0];
+
+        // Check if the nickname is already taken
+        for (int i = 0; i < (int)server.get_clients().size(); ++i)
+        {
+            Client &c = server.get_clients()[i];
+            if (c.getNickname() == newNickname) {
+                std::cerr << ERROR << "Nickname already taken: " << newNickname << std::endl;
+                server.send(client, "ERROR: Nickname already taken");
+                return;
+            }
+        }
+
+        client.setNickname(newNickname);
+        std::cout << INFO << "Client nickname set to: " << client.getNickname() << std::endl;
+
+        // Optionally, send a confirmation message back to the client
+        // server.send(client, "NICK :You are now known as " + newNickname);
     }
     else if (command == "JOIN")
     {
@@ -100,22 +128,33 @@ void parse_message(Server &server, Message &msg)
     }
     else if (command == "LIST")
     {
+        Client &client = msg.getSender();
+        server.send(client, ":server 321 " + client.getNickname() + " :Users Name" + "\n");
+
         std::vector<Channel> channels = server.get_channels();
         std::cout << INFO << "Available channels:" << std::endl;
         for (size_t i = 0; i < channels.size(); ++i)
         {
             int clientCount = channels[i].getClients().size();
+            if (channels[i].getName().empty())
+            {
+                std::string response = append_number(" #<no-name> ", clientCount);
+                response += " :" + channels[i].getTopic() + "\n";
+                server.send(client, ":server 322 " + client.getNickname() + response);
+            }
+            else
+            {
+                std::string response = append_number(" #" + channels[i].getName() + " ", clientCount);
+                response += " :" + channels[i].getTopic() + "\n";
+                server.send(client, ":server 322 " + client.getNickname() + response);
+            }
             std::cout << channels[i].getName() << " | Clients: " << clientCount << " | Topic: " << channels[i].getTopic() << std::endl;
         }
-    }
-    else if (command == "PING")
-    {
-        Client &client = msg.getSender();
-        server.send(client, "PONG :" + args);
-        std::cout << INFO << "Responded to PING with PONG" << std::endl;
+        server.send(client, ":server 323 " + client.getNickname() + " :End of /LIST");
     }
     else
     {
-        ft_log("Unknown command", "Command: " + command, 2);
+        std::cerr << ERROR << "Unknown command: " << command << std::endl;
+        server.send(msg.getSender(), "ERROR :Unknown command: " + command);
     }
 }
