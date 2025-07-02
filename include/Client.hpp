@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/08 23:47:53 by root              #+#    #+#             */
-/*   Updated: 2025/06/16 11:30:14 by root             ###   ########.fr       */
+/*   Updated: 2025/06/27 16:40:18 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,7 +72,7 @@ class Client
 		void	setIp(const std::string& ip);
 		void	setPort(int port);
 		void	setCurrentChannel(const std::string& channel);
-		bool	isEmpty();
+		bool	isEmpty() const;
 
 		friend std::ostream &operator<<(std::ostream& os, const Client& client);
 		friend bool operator==(const Client &scr, const Client &other);

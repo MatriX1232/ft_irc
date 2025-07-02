@@ -5,6 +5,7 @@
 #include <sstream>
 #include <string>
 #include "../include/utils.hpp"
+#include "../include/Headers.hpp"
 
 std::vector<std::string> split(const std::string &str, char delimiter)
 {
@@ -50,3 +51,14 @@ std::string get_current_timestamp()
     strftime(buf, sizeof(buf), "%Y-%m-%d %X", &tstruct);
     return buf;
 }
+
+// Client &get_client_from_msg(const Message &msg)
+// {
+//     Client &client = msg.getSender();
+//     if (client.isEmpty())
+//     {
+//         std::cerr << ERROR << "Client is empty in message" << std::endl;
+//         throw std::runtime_error("Client is empty in message");
+//     }
+//     return const_cast<Client &>(client);
+// }

@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/09 11:02:26 by root              #+#    #+#             */
-/*   Updated: 2025/06/15 12:26:14 by root             ###   ########.fr       */
+/*   Updated: 2025/06/30 14:02:25 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -238,7 +238,7 @@ Message Server::recv(Client &client)
         if (errno == EWOULDBLOCK || errno == EAGAIN)
             std::cout << INFO << "No data available on non-blocking socket" << std::endl;
     }
-    return (Message(client, "SomeNickname", c_strip(msg), std::time(0), bytesRead));
+    return (Message(client, client.getNickname(), c_strip(msg), std::time(0), bytesRead));
 }
 
 // int Server::recv_file()

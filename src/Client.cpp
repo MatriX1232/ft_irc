@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 15:06:38 by root              #+#    #+#             */
-/*   Updated: 2025/06/16 11:39:02 by root             ###   ########.fr       */
+/*   Updated: 2025/06/27 16:40:22 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -163,7 +163,7 @@ std::ostream &operator<<(std::ostream& os, const Client& client)
     return os;
 }
 
-bool Client::isEmpty()
+bool Client::isEmpty() const
 {
     return this->_clientSd == -1;
 }

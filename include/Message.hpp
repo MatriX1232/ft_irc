@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/04 12:12:56 by root              #+#    #+#             */
-/*   Updated: 2025/05/17 17:06:19 by root             ###   ########.fr       */
+/*   Updated: 2025/06/29 15:45:38 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,11 +27,11 @@
 class Message
 {
     private:
-        Client              _sender;
-        std::string         _nickname;
-        std::string   _content;
-        std::time_t   _timestamp;
-        int           _bytesRead;
+        Client    _sender;
+        std::string     _nickname;
+        std::string     _content;
+        std::time_t     _timestamp;
+        int             _bytesRead;
 
     public:
         Message();

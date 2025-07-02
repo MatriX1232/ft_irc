@@ -6,11 +6,13 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/04 12:29:50 by root              #+#    #+#             */
-/*   Updated: 2025/05/03 00:15:30 by root             ###   ########.fr       */
+/*   Updated: 2025/06/29 15:51:01 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/Message.hpp"
+#include "../include/Client.hpp"
+#include "../include/utils.hpp"
 
 Message::Message() 
     : _sender(Client()), _nickname(""), _content(""), _timestamp(std::time(0)), _bytesRead(0)
@@ -34,7 +36,7 @@ Message::~Message()
     // Destructor implementation
 }
 
-Client &Message::getSender()
+Client& Message::getSender()
 {
     return _sender;
 }

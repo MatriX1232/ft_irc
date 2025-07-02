@@ -71,6 +71,20 @@ void parse_message(Server &server, Message &msg)
         // Optionally, send a confirmation message back to the client
         // server.send(client, "NICK :You are now known as " + newNickname);
     }
+    else if (command == "USER")
+    {
+        if (arg_vector.size() < 2 || arg_vector[0].empty() || arg_vector[1].empty()) {
+            std::cerr << ERROR << "USER command requires a valid username and real name" << std::endl;
+            return;
+        }
+        Client &client = msg.getSender();
+        client.setUsername(arg_vector[0]);
+        client.setRealName(arg_vector[1]);
+        
+        std::string response = ":server 001 " + client.getNickname() + " :Welcome to the IRC server, " + client.getNickname() + "!";
+        response += " You are now known as " + client.getNickname() + " (" + client.getUsername() + ") - " + client.getRealName() + "\n";
+        server.send(client, response);
+    }
     else if (command == "JOIN")
     {
         if (arg_vector.empty() || arg_vector[0].empty()) {
@@ -165,6 +179,35 @@ void parse_message(Server &server, Message &msg)
             std::cout << channels[i].getName() << " | Clients: " << clientCount << " | Topic: " << channels[i].getTopic() << std::endl;
         }
         server.send(client, ":server 323 " + client.getNickname() + " :End of /LIST");
+    }
+    else if (command == "CAP")
+    {
+        if (arg_vector.empty() || arg_vector[0].empty())
+        {
+            std::cerr << ERROR << "CAP command requires a valid argument" << std::endl;
+            return;
+        }
+        Client &client = msg.getSender();
+        std::string capCommand = arg_vector[0];
+
+        if (capCommand == "LS")
+        {
+            server.send(client, ":server  CAP * LS :multi-prefix");
+        }
+        else if (capCommand == "REQ")
+        {
+            if (arg_vector.size() < 2 || arg_vector[1].empty())
+            {
+                std::cerr << ERROR << "CAP REQ command requires a valid capability" << std::endl;
+                return;
+            }
+            server.send(client, ":server  CAP * ACK " + arg_vector[1]);
+        }
+        else
+        {
+            std::cerr << ERROR << "Unknown CAP command: " << capCommand << std::endl;
+            server.send(client, ":server  CAP * NAK :Unknown command");
+        }
     }
     else
     {
