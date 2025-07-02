@@ -192,7 +192,8 @@ void parse_message(Server &server, Message &msg)
 
         if (capCommand == "LS")
         {
-            server.send(client, ":server  CAP * LS :multi-prefix");
+            std::string response = ":server  CAP * LS :" + arg_vector[2];
+            server.send(client, response);
         }
         else if (capCommand == "REQ")
         {

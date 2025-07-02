@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 15:06:38 by root              #+#    #+#             */
-/*   Updated: 2025/06/27 16:40:22 by root             ###   ########.fr       */
+/*   Updated: 2025/07/02 15:30:55 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,7 @@ Client::Client(int sd, std::string ip, int port) : _clientSd(sd), _ip(ip), _port
 
 Client::Client() : _clientSd(-1), _port(0), _authenticated(false)
 {
-    std::cout << "Created new CLIENT" << std::endl;
+    // std::cout << "Created new CLIENT" << std::endl;
 }
 
 Client::Client(const Client& other)
