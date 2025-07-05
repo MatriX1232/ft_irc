@@ -1,11 +1,5 @@
 CC = c++
-CPPFLAGS = -Wall -Wextra -Werror -std=c++98 -g \
-	-O3 \
-	-march=raptorlake \
-	-mtune=raptorlake \
-	-flto \
-	-funroll-loops \
-	-falign-functions=64
+CPPFLAGS = -Wall -Wextra -Werror -std=c++98 -g
 
 INCLUDES = -I/usr/include/ -I./include
 
@@ -20,6 +14,8 @@ SRCS = \
 	src/utils.cpp \
 	src/socket_utils.cpp \
 	src/ft_logs.cpp \
+	src/Halloy.cpp \
+	src/Outline.cpp \
 	src/commands/parse_message.cpp
 
 OBJS = $(SRCS:%.cpp=%.o)

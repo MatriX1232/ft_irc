@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/13 12:28:49 by root              #+#    #+#             */
-/*   Updated: 2025/06/29 15:50:20 by root             ###   ########.fr       */
+/*   Updated: 2025/07/05 14:56:54 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include "../include/Channel.hpp"
 #include "../include/Commands.hpp"
 #include "../include/Headers.hpp"
+#include "../include/Outline.hpp"
 
 std::vector<Message>    check_for_new_messages(Server &server)
 {
@@ -38,12 +39,14 @@ int main(int argc, char *argv[])
 {
     if (argc != 3)
     {
-        std::cout << WARNING << "Usage: ./ircserv <port> <password>" << std::endl;
-        std::cout << INFO << "Example: ./ircserv 25566 mypassword" << std::endl;
+        std::cout << Outline("[WARNING] Usage: ./ircserv <port> <password>", RED, WHITE);
+        std::cout << Outline("[INFO] Example: ./ircserv 25565 mypassword", CYAN, WHITE);
+        // std::cout << WARNING << "Usage: ./ircserv <port> <password>" << std::endl;
+        // std::cout << INFO << "Example: ./ircserv 25566 mypassword" << std::endl;
         return (EXIT_FAILURE);
     }
 
-    Server server(atoi(argv[1]));
+    Server server(atoi(argv[1]), argv[2]);
     server.start_listening(1);
 
     // 1) grab listen fd & make it non‐blocking
