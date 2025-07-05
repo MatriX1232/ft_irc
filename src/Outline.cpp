@@ -1,6 +1,6 @@
 #include "../include/Outline.hpp"
 
-Outline::Outline(std::string content, std::string outline_color, std::string content_color) : _content(content), _outline_color(outline_color), _content_color(content_color)
+Outline::Outline(std::string content, std::string outline_color, std::string content_color, std::string outline_text) : _content(content), _outline_color(outline_color), _content_color(content_color), _outline_text(outline_text)
 {
 
 }
@@ -22,18 +22,41 @@ std::string Outline::getOutlineC()
 
 std::ostream &operator<<(std::ostream &os, const Outline &outline)
 {
-    os << outline._outline_color;
-    os << "╭─";
-    for (int i = 0; i <= (int)outline._content.length(); i++)
-        os << "─";
-    os << "╮\n";
-    
-    os << "│ " << outline._content_color << outline._content_color << outline._content << END << outline._outline_color << " │\n";
+    if (outline._outline_text == "")
+    {
+            os << outline._outline_color;
+        os << "╭─";
+        for (int i = 0; i <= (int)outline._content.length(); i++)
+            os << "─";
+        os << "╮\n";
+        
+        os << "│ " << outline._content_color << outline._content_color << outline._content << END << outline._outline_color << " │\n";
 
-    os << "╰─";
-    for (int i = 0; i < (int)outline._content.length(); i++)
-        os << "─";
-    os << "─╯\n" << END;
+        os << "╰─";
+        for (int i = 0; i < (int)outline._content.length(); i++)
+            os << "─";
+        os << "─╯\n" << END;
+    }
+    else
+    {
+        os << outline._outline_color;
+        os << "╭─ " << outline._outline_text << " ─";
+        int delta = (int)outline._content.length() - 3 - (int)outline._outline_text.length();
+        if (delta > 0)
+        {
+            for (int i = 0; i <= delta; i++)
+                os << "─";
+        }
+        
+        os << "╮\n";
+        
+        os << "│ " << outline._content_color << outline._content_color << outline._content << END << outline._outline_color << " │\n";
+
+        os << "╰─";
+        for (int i = 0; i < (int)outline._content.length(); i++)
+            os << "─";
+        os << "─╯\n" << END;
+    }
     
     return (os);
 }

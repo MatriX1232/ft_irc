@@ -11,9 +11,10 @@ class Outline
         std::string _content;
         std::string _outline_color;
         std::string _content_color;
+        std::string _outline_text;
     
     public:
-        Outline(std::string content, std::string outline_color, std::string content_color);
+        Outline(std::string content, std::string outline_color, std::string content_color, std::string outline_text);
 
         std::string getContent();
         std::string getOutlineC();
