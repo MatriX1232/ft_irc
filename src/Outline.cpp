@@ -24,7 +24,8 @@ std::ostream &operator<<(std::ostream &os, const Outline &outline)
 {
     if (outline._outline_text == "")
     {
-            os << outline._outline_color;
+        // std::cout << INFO << "Choosen outline text" << std::endl;
+        os << outline._outline_color;
         os << "╭─";
         for (int i = 0; i <= (int)outline._content.length(); i++)
             os << "─";
@@ -39,6 +40,7 @@ std::ostream &operator<<(std::ostream &os, const Outline &outline)
     }
     else
     {
+        // std::cout << INFO << "Choosen lack of outline text" << std::endl;
         os << outline._outline_color;
         os << "╭─ " << outline._outline_text << " ─";
         int delta = (int)outline._content.length() - 3 - (int)outline._outline_text.length();
@@ -50,11 +52,31 @@ std::ostream &operator<<(std::ostream &os, const Outline &outline)
         
         os << "╮\n";
         
-        os << "│ " << outline._content_color << outline._content_color << outline._content << END << outline._outline_color << " │\n";
+        if (outline._outline_text.length() > outline._content.length())
+        {
+            os << "│ " << outline._content_color << outline._content_color << outline._content << END;
+            for (int i = 0; i <= (int)outline._outline_text.length() - (int)outline._content.length() + 1; i++)
+                os << " ";
+           os << outline._outline_color << " │\n";
+        }
+        else
+        {
+            os << "│ " << outline._content_color << outline._content_color << outline._content << END << outline._outline_color << " │\n";
+        }
 
         os << "╰─";
-        for (int i = 0; i < (int)outline._content.length(); i++)
-            os << "─";
+
+        if (outline._outline_text.length() > outline._content.length())
+        {
+            for (int i = 0; i <= (int)outline._outline_text.length() + 1; i++)
+                os << "─";
+        }
+        else
+        {
+            for (int i = 0; i < (int)outline._content.length(); i++)
+                os << "─";
+        }
+        
         os << "─╯\n" << END;
     }
     

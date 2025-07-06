@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/13 12:28:49 by root              #+#    #+#             */
-/*   Updated: 2025/07/05 16:05:56 by root             ###   ########.fr       */
+/*   Updated: 2025/07/06 09:30:49 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,11 +40,15 @@ int main(int argc, char *argv[])
     if (argc != 3)
     {
         std::cout << Outline("Usage: ./ircserv <port> <password>", RED, WHITE, "WARNING");
-        std::cout << Outline("Example: ./ircserv 25565 mypassword", CYAN, WHITE, "");
+        std::cout << Outline("Example: ./ircserv 25565 mypassword", CYAN, WHITE, "INFO");
         // std::cout << WARNING << "Usage: ./ircserv <port> <password>" << std::endl;
         // std::cout << INFO << "Example: ./ircserv 25566 mypassword" << std::endl;
         return (EXIT_FAILURE);
     }
+
+    std::cout << Outline("Welcome to the IRC server", GREEN, WHITE, "INFO");
+    std::cout << Outline("Made by MSOLINSK and IDOMAGAL", YELLOW, YELLOW, "INFO");
+    std::cout << Outline("ShortText", WHITE, RED, "Example of some long text that is longer than main one") << std::endl << std::endl;
 
     Server server(atoi(argv[1]), argv[2]);
     server.start_listening(1);
