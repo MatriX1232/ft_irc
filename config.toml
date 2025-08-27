@@ -1,1 +1,24 @@
-/root/.var/app/org.squidowl.halloy/config/halloy/config.toml
+# Halloy config.
+#
+# For a complete list of available options,
+# please visit https://halloy.chat/configuration/
+
+[servers.matrix25565]
+use_tls = false
+server = "localhost"
+port = 25565
+nickname = "CodeMatriX"
+username = "msolinsk"
+realname = "Mateusz"
+password = "pass"
+channels = ["#general"]
+
+[servers.matrix25566]
+use_tls = false
+server = "localhost"
+port = 25566
+nickname = "CodeMatriX"
+username = "msolinsk"
+realname = "Mateusz"
+password = "pass"
+channels = ["#general"]
