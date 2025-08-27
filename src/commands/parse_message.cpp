@@ -8,6 +8,7 @@
 #include "../../include/Channel.hpp"
 #include "../../include/Headers.hpp"
 #include "../../include/Client.hpp"
+#include "../../include/Outline.hpp"
 
 
 void parse_message(Server &server, Message &msg)
@@ -210,9 +211,139 @@ void parse_message(Server &server, Message &msg)
             server.send(client, ":server  CAP * NAK :Unknown command");
         }
     }
+    else if (command == "KICK")
+    {
+        if (arg_vector.size() < 2 || arg_vector[0].empty() || arg_vector[1].empty())
+        {
+            std::cerr << ERROR << "KICK command requires a valid channel and user" << std::endl;
+            return;
+        }
+        
+        Channel channel = server.access_channel(arg_vector[0]);
+        Client &client = get_client_from_channel_by_name(channel, arg_vector[1]);
+        channel.removeClient(client);
+        std::cout << WARNING << "Kicking user: " << arg_vector[1] << " from channel " << arg_vector[0] << std::endl;
+        std::string response = ":server  KICK " + arg_vector[0] + " " + arg_vector[1] + " :You have been kicked from the channel\n";
+        server.send(client, response);
+    }
     else
     {
         std::cerr << ERROR << "Unknown command: " << command << std::endl;
         server.send(msg.getSender(), "ERROR :Unknown command: " + command);
+    }
+}
+
+void    parse_initial_message(Server &server, Message &msg)
+{
+    const std::string content = msg.getContent();
+    const std::string command = content.substr(0, content.find(' '));
+    const std::string args = content.substr(content.find(' ') + 1);
+    const std::vector<std::string> arg_vector = split(args, ' ');
+
+    if (command == "PASS")
+    {
+        // Channel &channel = server.access_channel(msg.getSender().getCurrentChannel());
+        // std::cout << Outline("Server password: pass | User provided password: " + arg_vector[0], RED, RED, "");
+        // std::cout << "Password: " << arg_vector[0] << std::endl;
+        if (server.check_password(arg_vector[0]))
+        {
+            msg.getSender().setAuthenticated(true);
+            // server.send(msg.getSender(), ":server ACCEPT: Password accepted");
+            std::cout << SUCCESS << "Password accepted for client: " << msg.getSender().getFd() << std::endl;
+        }
+        else
+        {
+            std::cerr << ERROR << "Incorrect password for client: " << msg.getSender().getNickname() << std::endl;
+            server.send(msg.getSender(), "[*" + server.get_serverName() + "*] " + "Password incorrect.");
+            close(msg.getSender().getSd());
+            return;
+        }
+    }
+    else if (command == "CAP")
+    {
+        // std::cout << "Entered CAP command processing" << std::endl;
+        if (arg_vector.empty() || arg_vector[0].empty())
+        {
+            std::cerr << ERROR << "CAP command requires a valid argument" << std::endl;
+            return;
+        }
+        // std::cout << "Getting client from message sender" << std::endl;
+        Client &client = msg.getSender();
+        // std::cout << ERROR << client << std::endl;
+        std::cout << WARNING << "Why this is launching on eveny command?" << std::endl;
+        std::string capCommand = arg_vector[0];
+
+        if (capCommand == "LS")
+        {
+            // std::cout << INFO << "CAP LS command received" << std::endl;
+            // std::string response = ":" + server.get_serverName() + " CAP * LS :" + arg_vector[1];
+            std::string response = ":" + server.get_serverName() + " CAP * LS :" + "421 ERR_UNKNOWNCOMMAND";
+            server.send(client, response);
+            // std::cout << "CAP LS response sent: " << response << std::endl;
+        }
+        else if (capCommand == "END")
+        {
+            std::cout << INFO << "CAP END command received" << std::endl;
+            server.send(client, ":" + server.get_serverName() + " CAP * END");
+        }
+        else if (capCommand == "REQ")
+        {
+            if (arg_vector.size() < 2 || arg_vector[1].empty())
+            {
+                std::cerr << ERROR << "CAP REQ command requires a valid capability" << std::endl;
+                return;
+            }
+            server.send(client, ":server  CAP * ACK " + arg_vector[1]);
+        }
+        else
+        {
+            std::cerr << ERROR << "Unknown CAP command: " << capCommand << std::endl;
+            server.send(client, ":server  CAP * NAK :Unknown command");
+        }
+    }
+    else if (command == "NICK")
+    {
+        if (arg_vector.empty() || arg_vector[0].empty()) {
+            std::cerr << ERROR << "NICK command requires a valid nickname" << std::endl;
+            return;
+        }
+
+        Client &client = msg.getSender();
+        const std::string newNickname = arg_vector[0];
+
+        // Check if the nickname is already taken
+        for (int i = 0; i < (int)server.get_clients().size(); ++i)
+        {
+            Client &c = server.get_clients()[i];
+            if (c.getNickname() == newNickname) {
+                std::cerr << ERROR << "Nickname already taken: " << newNickname << std::endl;
+                server.send(client, "ERROR: Nickname already taken");
+                return;
+            }
+        }
+
+        client.setNickname(newNickname);
+        std::cout << INFO << "Client nickname set to: " << client.getNickname() << std::endl;
+
+        // Optionally, send a confirmation message back to the client
+        // server.send(client, "NICK :You are now known as " + newNickname);
+    }
+    else if (command == "USER")
+    {
+        if (arg_vector.size() < 2 || arg_vector[0].empty() || arg_vector[1].empty()) {
+            std::cerr << ERROR << "USER command requires a valid username and real name" << std::endl;
+            return;
+        }
+        Client &client = msg.getSender();
+        client.setUsername(arg_vector[0]);
+        client.setRealName(arg_vector[1]);
+        
+        std::string response = ":server 001 " + client.getNickname() + " :Welcome to the IRC server, " + client.getNickname() + "!";
+        response += " You are now known as " + client.getNickname() + " (" + client.getUsername() + ") - " + client.getRealName() + "\n";
+        server.send(client, response);
+    }
+    else
+    {
+        server.send(msg.getSender(), ":server ERROR: Expected different initial info msg");
     }
 }

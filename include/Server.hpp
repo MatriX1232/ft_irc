@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/08 23:47:53 by root              #+#    #+#             */
-/*   Updated: 2025/06/15 12:25:49 by root             ###   ########.fr       */
+/*   Updated: 2025/07/06 11:00:06 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,13 +46,15 @@ class Server
         int					    _newSd;
         std::string			    _password;
         std::string			    _serverName;
-        std::vector<Client>	    _clients;
+        std::vector<Client> 	_clients;
         std::vector<Channel>    _channels;
 
         void    retrieve_initial_info(Client &client);
+        void    halloy_support(Client &client);
+        Server  *get_self();
     
     public:
-        Server(int port);
+        Server(int port, std::string password);
         ~Server();
         
         int start_listening(int n_clients);
@@ -65,6 +67,7 @@ class Server
         int recv_file();
 
         std::string get_password() const;
+        std::string get_serverName() const;
         int get_port();
         int get_serverSd();
         int getListenFd() const;

@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/13 11:56:28 by root              #+#    #+#             */
-/*   Updated: 2025/06/29 15:47:29 by root             ###   ########.fr       */
+/*   Updated: 2025/07/06 10:12:29 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,11 @@
 #include <sys/select.h>
 #include "Client.hpp"
 #include "Message.hpp"
+#include "Channel.hpp"
+#include "Server.hpp"
+
+
+void    parse_initial_message(Server &server, Message &msg);
 
 void ft_log(const std::string &str, const std::string &str_optional, int level);
 void ft_log_sub(const std::string &str, const std::string &str_optional, int level, int sub_level);
@@ -37,5 +42,7 @@ std::string get_current_timestamp();
 
 // client utils
 // Client &get_client_from_msg(const Message &msg);
+Client &get_client_from_channel_by_name(Channel &channel, const std::string &client_name);
+
 
 #endif

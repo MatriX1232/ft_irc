@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/09 11:02:26 by root              #+#    #+#             */
-/*   Updated: 2025/06/30 14:02:25 by root             ###   ########.fr       */
+/*   Updated: 2025/07/16 21:37:04 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,13 +15,20 @@
 #include "../include/Client.hpp"
 #include "../include/Message.hpp"
 #include "../include/Channel.hpp"
+#include "../include/Outline.hpp"
 #include <vector>
 #include <string>
 #include <algorithm>
 
-Server::Server(int port) : _port(port)
+Server::Server(int port, std::string password) : _port(port), _password(password), _serverName("matrix25565")
 {
-    std::cout << INFO << "Created new SERVER" << std::endl;
+    // Initialize server socket descriptor
+    this->_serverSd = -1;
+    this->_newSd = -1;
+
+    // Initialize clients and channels vectors
+    this->_clients.clear();
+    this->_channels.clear();
 }
 
 Server::~Server()
@@ -108,20 +115,57 @@ int Server::accept_new_client()
         std::string ip = inet_ntoa(newSockAddr.sin_addr);
         int port = ntohs(newSockAddr.sin_port);
         Client newClient(newSd, ip, port);
-        std::cout <<
-        INFO <<
-        "Connected with client! | " <<
-        "SD: " << newSd << " | " <<
-        "IP: " << ip << " | " <<
-        "PORT: " << port << std::endl;
-        newClient.setCurrentChannel(this->_channels[0].getName()); // Default channel
-        // this->retrieve_initial_info(newClient);
+    
+        std::string response = "Connectedd with client! | SD: ";
+        response = append_number(response, newSd);
+        response += " | IP: " + ip + " | PORT: ";
+        response = append_number(response, port);
+        std::cout << INFO << response << std::endl;
+        // std::cout << Outline(response, CYAN, WHITE, "New client") << std::endl;
+
+        this->halloy_support(newClient);
         this->_clients.push_back(newClient);
-        this->_channels[0].addClient(newClient);
     }
     return 0;
 }
+
+Server *Server::get_self()
+{
+    return (this);
+}
  
+void Server::halloy_support(Client &client)
+{
+    std::cout << Outline("Halloy supported!", YELLOW, YELLOW, "Support info") << std::endl;
+    
+    Message msg = this->recv(client);
+    int attempts = 0;
+    
+    while (msg.getBytesRead() <= 2 && attempts < 5)
+    {
+        Message msg = this->recv(client);
+        attempts++;
+    }
+    if (attempts >= 5)
+    {
+        std::cerr << ERROR << "Failed to receive initial message from client after multiple attempts" << std::endl;
+        close(client.getSd());
+        return;
+    }
+    
+    const std::vector<std::string> line_split = split(msg.getContent(), '\n');
+    std::cout << INFO << "Received initial message from client: " << client.getNickname() << std::endl;
+    // std::cout << "Lines were splitted" << std::endl;
+    
+    for (int i = 0; i < (int)line_split.size(); i++)
+    {
+        // TODO: Change client to REF and ensure that server is REF and NOT DEREF POINTER
+        std::cout << WARNING << "Current init command: " << line_split[i] << std::endl;
+        // Message new_msg = Message(msg.getSender(), msg.getNickname(), line_split[i], msg.getTimestamp(), msg.getBytesRead());
+        parse_initial_message(*this->get_self(), msg);
+    }
+}
+
 void Server::retrieve_initial_info(Client &client)
 {
     for (int i = 0; i < 3; ++i)
@@ -221,7 +265,10 @@ void    Server::send(Client &client, std::string msg)
     }
     int bytesSent = ::send(client.getSd(), msg.c_str(), msg.length(), 0);
     if (bytesSent < 0)
+    {
         std::cerr << ERROR << "Error sending message to client: " << strerror(errno) << std::endl;
+        std::cerr << ERROR << "Trying to send: " << msg << std::endl;
+    }
 }
 
 Message Server::recv(Client &client)
@@ -233,11 +280,11 @@ Message Server::recv(Client &client)
     int bytesRead = ::recv(client.getSd(), (char*)&msg, sizeof(msg), 0);
     if (bytesRead == 0 || strcmp(msg, "exit") == 0)
         return Message();
-    else
-    {
-        if (errno == EWOULDBLOCK || errno == EAGAIN)
-            std::cout << INFO << "No data available on non-blocking socket" << std::endl;
-    }
+    // else
+    // {
+    //     if (errno == EWOULDBLOCK || errno == EAGAIN)
+    //         ;
+    // }
     return (Message(client, client.getNickname(), c_strip(msg), std::time(0), bytesRead));
 }
 
@@ -301,6 +348,11 @@ Channel &Server::access_channel(std::string channelName)
 void    Server::add_channel(Channel &channel)
 {
     this->_channels.push_back(channel);
+}
+
+std::string Server::get_serverName() const
+{
+    return this->_serverName;
 }
 
 std::string Server::get_password() const

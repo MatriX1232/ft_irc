@@ -6,7 +6,7 @@
 /*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/09 19:28:11 by root              #+#    #+#             */
-/*   Updated: 2025/05/03 00:21:22 by root             ###   ########.fr       */
+/*   Updated: 2025/07/05 09:37:10 by root             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,7 @@
 #include "Message.hpp"
 #include "Server.hpp"
 
-void parse_message(Server &server, Message &msg);
+void    parse_message(Server &server, Message &msg);
+void    parse_initial_message(Server &server, Message &msg);
 
 #endif

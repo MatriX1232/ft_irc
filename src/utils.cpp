@@ -6,6 +6,7 @@
 #include <string>
 #include "../include/utils.hpp"
 #include "../include/Headers.hpp"
+#include "../include/Channel.hpp"
 
 std::vector<std::string> split(const std::string &str, char delimiter)
 {
@@ -50,6 +51,19 @@ std::string get_current_timestamp()
     tstruct = *localtime(&now);
     strftime(buf, sizeof(buf), "%Y-%m-%d %X", &tstruct);
     return buf;
+}
+
+Client &get_client_from_channel_by_name(Channel &channel, const std::string &client_name)
+{
+    std::vector<Client> clients = channel.getClients();
+    for (int i = 0; i < (int)clients.size(); ++i)
+    {
+        if (clients[i].getNickname() == client_name)
+        {
+            return clients[i];
+        }
+    }
+    throw std::runtime_error("Client not found");
 }
 
 // Client &get_client_from_msg(const Message &msg)

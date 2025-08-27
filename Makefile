@@ -14,7 +14,6 @@ SRCS = \
 	src/utils.cpp \
 	src/socket_utils.cpp \
 	src/ft_logs.cpp \
-	src/Halloy.cpp \
 	src/Outline.cpp \
 	src/commands/parse_message.cpp
 
