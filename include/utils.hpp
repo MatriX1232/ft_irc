@@ -25,7 +25,7 @@
 #include "Server.hpp"
 
 
-void    parse_initial_message(Server &server, Message &msg);
+void    parse_initial_message(Server &server, Client &client, std::string cmd);
 
 void ft_log(const std::string &str, const std::string &str_optional, int level);
 void ft_log_sub(const std::string &str, const std::string &str_optional, int level, int sub_level);

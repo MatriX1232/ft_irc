@@ -20,6 +20,5 @@
 #include "Server.hpp"
 
 void    parse_message(Server &server, Message &msg);
-void    parse_initial_message(Server &server, Message &msg);
 
 #endif

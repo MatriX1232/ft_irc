@@ -26,7 +26,7 @@ int    wait_for_activity(int maxfd, fd_set &readfds)
     int activity = select(maxfd + 1, &readfds, NULL, NULL, NULL);
     if (activity < 0)
     {
-        std::cout << ERROR << "Error in select" << std::endl;
+        std::cout << ERROR << "Select error: no activity detected" << std::endl;
         return (-1);
     }
     return (0);

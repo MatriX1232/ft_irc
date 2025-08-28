@@ -50,7 +50,6 @@ class Server
         std::vector<Channel>    _channels;
 
         void    retrieve_initial_info(Client &client);
-        void    halloy_support(Client &client);
         Server  *get_self();
     
     public:
@@ -72,7 +71,7 @@ class Server
         int get_serverSd();
         int getListenFd() const;
         int getFd() const;
-		std::vector<Client> get_clients() const;
+        std::vector<Client> get_clients() const;
         std::vector<Channel> &get_channels();
 
         void    add_channel(Channel &channel);
@@ -80,7 +79,7 @@ class Server
         
         bool    check_password(std::string password);
         int     assign_read_mode(int listen_fd, fd_set &readfds);
-
+        void    halloy_support(Client &client, Message &msg);
         friend std::ostream &operator<<(std::ostream &os, const Server &server);
 };
 

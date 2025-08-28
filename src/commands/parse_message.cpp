@@ -193,7 +193,7 @@ void parse_message(Server &server, Message &msg)
 
         if (capCommand == "LS")
         {
-            std::string response = ":server  CAP * LS :" + arg_vector[2];
+            std::string response = ":server  CAP * LS :\r\n";
             server.send(client, response);
         }
         else if (capCommand == "REQ")
@@ -205,6 +205,8 @@ void parse_message(Server &server, Message &msg)
             }
             server.send(client, ":server  CAP * ACK " + arg_vector[1]);
         }
+        else if (capCommand == "END")
+            std::cout << "Client negotiation ended successfully!" << std::endl;
         else
         {
             std::cerr << ERROR << "Unknown CAP command: " << capCommand << std::endl;
@@ -233,117 +235,115 @@ void parse_message(Server &server, Message &msg)
     }
 }
 
-void    parse_initial_message(Server &server, Message &msg)
+void    parse_initial_message(Server &server, Client &client, std::string cmd)
 {
-    const std::string content = msg.getContent();
-    const std::string command = content.substr(0, content.find(' '));
-    const std::string args = content.substr(content.find(' ') + 1);
-    const std::vector<std::string> arg_vector = split(args, ' ');
+    const std::vector<std::string> arg_vector = split(cmd, ' ');
 
-    if (command == "PASS")
+    if (arg_vector[0] == "PASS")
     {
         // Channel &channel = server.access_channel(msg.getSender().getCurrentChannel());
         // std::cout << Outline("Server password: pass | User provided password: " + arg_vector[0], RED, RED, "");
         // std::cout << "Password: " << arg_vector[0] << std::endl;
-        if (server.check_password(arg_vector[0]))
-        {
-            msg.getSender().setAuthenticated(true);
-            // server.send(msg.getSender(), ":server ACCEPT: Password accepted");
-            std::cout << SUCCESS << "Password accepted for client: " << msg.getSender().getFd() << std::endl;
-        }
+        if (server.check_password(arg_vector[1]))
+            std::cout << SUCCESS << "Password accepted for client:\n" << client << std::endl;
         else
         {
-            std::cerr << ERROR << "Incorrect password for client: " << msg.getSender().getNickname() << std::endl;
-            server.send(msg.getSender(), "[*" + server.get_serverName() + "*] " + "Password incorrect.");
-            close(msg.getSender().getSd());
+            std::cerr << ERROR << "Incorrect password for client:\n" << client << std::endl;
+            server.send(client, "[*" + server.get_serverName() + "*] " + "Password incorrect.");
             return;
         }
     }
-    else if (command == "CAP")
+    else if (arg_vector[0] == "CAP")
     {
-        // std::cout << "Entered CAP command processing" << std::endl;
-        if (arg_vector.empty() || arg_vector[0].empty())
+        if (arg_vector.empty() || arg_vector[1].empty())
         {
             std::cerr << ERROR << "CAP command requires a valid argument" << std::endl;
             return;
         }
-        // std::cout << "Getting client from message sender" << std::endl;
-        Client &client = msg.getSender();
-        // std::cout << ERROR << client << std::endl;
-        std::cout << WARNING << "Why this is launching on eveny command?" << std::endl;
-        std::string capCommand = arg_vector[0];
-
-        if (capCommand == "LS")
+        if (arg_vector[1] == "LS")
         {
-            // std::cout << INFO << "CAP LS command received" << std::endl;
-            // std::string response = ":" + server.get_serverName() + " CAP * LS :" + arg_vector[1];
-            std::string response = ":" + server.get_serverName() + " CAP * LS :" + "421 ERR_UNKNOWNCOMMAND";
-            server.send(client, response);
-            // std::cout << "CAP LS response sent: " << response << std::endl;
+            server.send(client, ":server  CAP * LS :\r\n");
         }
-        else if (capCommand == "END")
+        else if (arg_vector[1] == "END")
         {
-            std::cout << INFO << "CAP END command received" << std::endl;
+            std::cout << SUCCESS << "Client authenticated: " << client.getNickname() << std::endl;
+            client.setAuthenticated(true);
             server.send(client, ":" + server.get_serverName() + " CAP * END");
         }
-        else if (capCommand == "REQ")
+        else if (arg_vector[1] == "REQ")
         {
             if (arg_vector.size() < 2 || arg_vector[1].empty())
             {
                 std::cerr << ERROR << "CAP REQ command requires a valid capability" << std::endl;
                 return;
             }
-            server.send(client, ":server  CAP * ACK " + arg_vector[1]);
+            server.send(client, ":server  CAP * ACK " + arg_vector[2]);
         }
         else
         {
-            std::cerr << ERROR << "Unknown CAP command: " << capCommand << std::endl;
+            std::cerr << ERROR << "Unknown CAP command: " << arg_vector[1] << std::endl;
             server.send(client, ":server  CAP * NAK :Unknown command");
         }
     }
-    else if (command == "NICK")
+    else if (arg_vector[0] == "NICK")
     {
-        if (arg_vector.empty() || arg_vector[0].empty()) {
+        if (arg_vector.empty() || arg_vector[1].empty()) {
             std::cerr << ERROR << "NICK command requires a valid nickname" << std::endl;
             return;
         }
-
-        Client &client = msg.getSender();
-        const std::string newNickname = arg_vector[0];
-
         // Check if the nickname is already taken
         for (int i = 0; i < (int)server.get_clients().size(); ++i)
         {
             Client &c = server.get_clients()[i];
-            if (c.getNickname() == newNickname) {
-                std::cerr << ERROR << "Nickname already taken: " << newNickname << std::endl;
+            if (c.getNickname() == arg_vector[1]) {
+                std::cerr << ERROR << "Nickname already taken: " << arg_vector[1] << std::endl;
                 server.send(client, "ERROR: Nickname already taken");
                 return;
             }
         }
 
-        client.setNickname(newNickname);
+        client.setNickname(arg_vector[1]);
         std::cout << INFO << "Client nickname set to: " << client.getNickname() << std::endl;
 
         // Optionally, send a confirmation message back to the client
         // server.send(client, "NICK :You are now known as " + newNickname);
     }
-    else if (command == "USER")
+    else if (arg_vector[0] == "USER")
     {
-        if (arg_vector.size() < 2 || arg_vector[0].empty() || arg_vector[1].empty()) {
-            std::cerr << ERROR << "USER command requires a valid username and real name" << std::endl;
+        // Check that we have at least 4 parameters for USER command
+        // USER <username> <mode> <unused> :<realname>
+        if (arg_vector.size() < 4) {
+            std::cerr << ERROR << "USER command requires username, mode, unused, and realname" << std::endl;
             return;
         }
-        Client &client = msg.getSender();
-        client.setUsername(arg_vector[0]);
-        client.setRealName(arg_vector[1]);
+        std::string username = arg_vector[1];
+        std::string realname;
         
-        std::string response = ":server 001 " + client.getNickname() + " :Welcome to the IRC server, " + client.getNickname() + "!";
-        response += " You are now known as " + client.getNickname() + " (" + client.getUsername() + ") - " + client.getRealName() + "\n";
-        server.send(client, response);
+        // Handle the realname parameter which may contain spaces
+        // If it starts with a colon, it's typically the remainder of the command
+        if (arg_vector.size() > 3) {
+            if (arg_vector[3].at(0) == ':') {
+                // Remove the colon and use the rest as realname
+                realname = arg_vector[3].substr(1);
+            } else {
+                // Use the fourth parameter as realname
+                realname = arg_vector[3];
+            }
+        }
+        
+        client.setUsername(arg_vector[1]);
+        client.setRealName(realname);
+        
+        // Send a properly formatted welcome message
+        std::string response = ":server 001 " + client.getNickname() + " :Welcome to the IRC server, " + client.getNickname() + "!\r\n";
+        response += ":server 002 " + client.getNickname() + " :Your host is server, running version 1.0\r\n";
+        response += ":server 003 " + client.getNickname() + " :This server was created today\r\n";
+        response += ":server 004 " + client.getNickname() + " server 1.0 o o\r\n";
+        server.send(client, response);\
+        std::cout << client << std::endl;
     }
     else
     {
-        server.send(msg.getSender(), ":server ERROR: Expected different initial info msg");
+        server.send(client, ":server ERROR: Expected different initial info msg");
     }
 }

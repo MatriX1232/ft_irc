@@ -1,4 +1,4 @@
-/* ************************************************************************** */
+ /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
@@ -116,14 +116,14 @@ int Server::accept_new_client()
         int port = ntohs(newSockAddr.sin_port);
         Client newClient(newSd, ip, port);
     
-        std::string response = "Connectedd with client! | SD: ";
+        std::string response = "Connected with client! | SD: ";
         response = append_number(response, newSd);
         response += " | IP: " + ip + " | PORT: ";
         response = append_number(response, port);
         std::cout << INFO << response << std::endl;
         // std::cout << Outline(response, CYAN, WHITE, "New client") << std::endl;
-
-        this->halloy_support(newClient);
+        newClient.setAuthenticated(false);
+        // this->halloy_support(newClient);
         this->_clients.push_back(newClient);
     }
     return 0;
@@ -133,88 +133,27 @@ Server *Server::get_self()
 {
     return (this);
 }
- 
-void Server::halloy_support(Client &client)
+
+void Server::halloy_support(Client &client, Message &msg)
 {
-    std::cout << Outline("Halloy supported!", YELLOW, YELLOW, "Support info") << std::endl;
-    
-    Message msg = this->recv(client);
-    int attempts = 0;
-    
-    while (msg.getBytesRead() <= 2 && attempts < 5)
-    {
-        Message msg = this->recv(client);
-        attempts++;
-    }
-    if (attempts >= 5)
-    {
-        std::cerr << ERROR << "Failed to receive initial message from client after multiple attempts" << std::endl;
-        close(client.getSd());
-        return;
-    }
-    
     const std::vector<std::string> line_split = split(msg.getContent(), '\n');
-    std::cout << INFO << "Received initial message from client: " << client.getNickname() << std::endl;
-    // std::cout << "Lines were splitted" << std::endl;
-    
     for (int i = 0; i < (int)line_split.size(); i++)
     {
-        // TODO: Change client to REF and ensure that server is REF and NOT DEREF POINTER
-        std::cout << WARNING << "Current init command: " << line_split[i] << std::endl;
-        // Message new_msg = Message(msg.getSender(), msg.getNickname(), line_split[i], msg.getTimestamp(), msg.getBytesRead());
-        parse_initial_message(*this->get_self(), msg);
-    }
-}
-
-void Server::retrieve_initial_info(Client &client)
-{
-    for (int i = 0; i < 3; ++i)
-    {
-        const Message msg = this->recv(client);
-        const std::string content = msg.getContent();
-        const std::string command = content.substr(0, content.find(' '));
-        const std::string args = content.substr(content.find(' ') + 1);
-        const std::vector<std::string> arg_vector = split(args, ' ');
-        
-        std::cout << "Loop iteration: " << i << std::endl;
-        std::cout << msg.getContent() << std::endl;
-        if (msg.getContent().empty())
+        std::string command = line_split[i];
+        // Skip empty lines
+        if (command.empty()) {
             continue;
-
-        std::cout << ERROR << i << std::endl;
-        if (i == 0) // Expecting nickname
-        {
-            client.setNickname(arg_vector[0]);
-            std::cout << INFO << "Client nickname set to: " << client.getNickname() << std::endl;
         }
-        else if (i == 1) // Expecting password
-        {
-            if (this->check_password(arg_vector[0]))
-                std::cout << SUCCESS << "Password accepted for client: " << client.getNickname() << std::endl;
-            else
-            {
-                std::cerr << ERROR << "Incorrect password for client: " << client.getNickname() << std::endl;
-                close(client.getSd());
-                return;
-            }
+        // Remove carriage returns if present
+        size_t cr_pos = command.find('\r');
+        if (cr_pos != std::string::npos) {
+            command = command.substr(0, cr_pos);
         }
-        else if (i == 2) // Expecting channel name
-        {
-            try
-            {
-                Channel &channel = this->access_channel(arg_vector[0]);
-                channel.addClient(client);
-                client.setCurrentChannel(channel.getName());
-                std::cout << INFO << "Client joined channel: " << channel.getName() << std::endl;
-            }
-            catch (const std::exception &e)
-            {
-                std::cerr << ERROR << e.what() << std::endl;
-                close(client.getSd());
-                return;
-            }
-        }
+        
+        std::cout << WARNING << "Current init command: " << command << std::endl;
+        parse_initial_message(*this->get_self(), client, command);
     }
+    
 }
 
 int Server::disconnect()
@@ -263,6 +202,18 @@ void    Server::send(Client &client, std::string msg)
         std::cout << INFO << "Client disconnected" << std::endl;
         return;
     }
+    
+    // Check if the client socket is valid
+    if (client.getSd() < 0) {
+        std::cerr << ERROR << "Attempting to send to invalid socket descriptor" << std::endl;
+        return;
+    }
+    
+    // Make sure the message ends with the proper line termination for IRC
+    if (msg.find("\r\n") == std::string::npos && msg[std::string::npos] != '\n') {
+        msg += "\r\n";
+    }
+    
     int bytesSent = ::send(client.getSd(), msg.c_str(), msg.length(), 0);
     if (bytesSent < 0)
     {
