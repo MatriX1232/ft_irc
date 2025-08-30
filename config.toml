@@ -3,6 +3,8 @@
 # For a complete list of available options,
 # please visit https://halloy.chat/configuration/
 
+ping_time = 10
+
 [servers.matrix25565]
 use_tls = false
 server = "localhost"
