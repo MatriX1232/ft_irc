@@ -130,8 +130,8 @@ void parse_message(Server &server, Message &msg)
                 std::cout << INFO << "Client " << client.getNickname() << " joined channel " << channelName << std::endl;
 
                 // Send server responses
-                server.send(client, ":server 332 " + client.getNickname() + " " + channelName + " :" + newChannel.getTopic());
-                server.send(client, ":server 333 " + client.getNickname() + " " + channelName + " " + client.getNickname() + " " + get_current_timestamp());
+                server.send(client, ":server 332 " + client.getNickname() + " #" + channelName + " :" + newChannel.getTopic());
+                server.send(client, ":server 333 " + client.getNickname() + " #" + channelName + " " + client.getNickname() + " " + get_current_timestamp());
 
                 // List users in the channel
                 std::string userList = client.getNickname();
