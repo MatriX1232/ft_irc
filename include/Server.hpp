@@ -71,7 +71,8 @@ class Server
         int get_serverSd();
         int getListenFd() const;
         int getFd() const;
-        std::vector<Client> get_clients() const;
+        std::vector<Client>& get_clients();
+        const std::vector<Client>& get_clients() const;
         std::vector<Channel> &get_channels();
 
         void    add_channel(Channel &channel);

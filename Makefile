@@ -39,7 +39,7 @@ PADDING = 50
 
 all: $(NAME)
 
-%.o: %.c
+%.o: %.cpp
 	@printf "$(_CYAN)Compiling : $(_YELLOW)%-$(PADDING).$(PADDING)s\r$(_END)" $@
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 

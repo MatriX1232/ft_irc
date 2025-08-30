@@ -15,7 +15,7 @@
 #include "../include/utils.hpp"
 
 Message::Message() 
-    : _sender(Client()), _nickname(""), _content(""), _timestamp(std::time(0)), _bytesRead(0)
+    : _sender(NULL), _nickname(""), _content(""), _timestamp(std::time(0)), _bytesRead(0)
 {
     // Default constructor implementation
 }
@@ -25,8 +25,8 @@ Message::Message(const Message &msg)
     // Copy constructor implementation
 }
 
-Message::Message(Client sender, std::string nickname, const std::string& content, std::time_t timestamp, int bytesRead)
-    : _sender(sender), _nickname(nickname), _content(content), _timestamp(timestamp), _bytesRead(bytesRead)
+Message::Message(Client &sender, std::string nickname, const std::string& content, std::time_t timestamp, int bytesRead)
+    : _sender(&sender), _nickname(nickname), _content(content), _timestamp(timestamp), _bytesRead(bytesRead)
 {
     // Parameterized constructor implementation
 }
@@ -38,7 +38,7 @@ Message::~Message()
 
 Client& Message::getSender()
 {
-    return _sender;
+    return *_sender;
 }
 
 std::string Message::getNickname() const
@@ -63,7 +63,7 @@ int Message::getBytesRead() const
 
 void Message::setSender(Client &sender)
 {
-    _sender = sender;
+    _sender = &sender;
 }
 
 void Message::setContent(std::string content)

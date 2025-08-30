@@ -24,7 +24,7 @@ class Channel
 {
     private:
         std::vector<Message> _messages;
-        std::vector<Client> _clients;
+        std::vector<Client*> _clients;
         std::string _name;
         std::string _topic;
         std::string _password;
@@ -37,15 +37,16 @@ class Channel
         bool check_password(const std::string password) const;
 
         void addMessage(Message msg);
-        void addClient(Client client);
-        void removeClient(Client client);
+        void addClient(Client &client);
+        void removeClient(Client &client);
         void displayMessages();
         void clearMessages();
         
         std::string getName() const;
         std::string getTopic() const;
-        std::vector<Client> getClients();
-        
+        std::vector<Client*>& getClients();
+        const std::vector<Client*>& get_clients() const;
+
         std::vector<Message> getMessages();
         Message getMessageByIndex(int index);
         std::vector<Message> getMessageByUser(std::string userName);

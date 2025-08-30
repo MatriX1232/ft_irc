@@ -28,15 +28,21 @@ Channel::~Channel()
     // Destructor implementation
 }
 
-void Channel::addClient(Client client)
+void Channel::addClient(Client &client)
 {
-    _clients.push_back(client);
+    // avoid duplicates
+    for (size_t i = 0; i < _clients.size(); ++i)
+    {
+        if (_clients[i] && _clients[i]->getSd() == client.getSd())
+            return;
+    }
+    _clients.push_back(&client);
 }
-void Channel::removeClient(Client client)
+void Channel::removeClient(Client &client)
 {
     for (size_t i = 0; i < _clients.size(); ++i)
     {
-        if (_clients[i].getSd() == client.getSd())
+        if (_clients[i] && _clients[i]->getSd() == client.getSd())
         {
             _clients.erase(_clients.begin() + i);
             std::cout << INFO << "Client removed from channel: " << _name << std::endl;
@@ -46,9 +52,14 @@ void Channel::removeClient(Client client)
     std::cerr << WARNING << "Client not found in channel: " << _name << std::endl;
 }
 
-std::vector<Client> Channel::getClients()
+std::vector<Client*>& Channel::getClients()
 {
     return _clients;
+}
+
+const std::vector<Client*>& Channel::get_clients() const
+{
+    return this->_clients;
 }
 
 void Channel::addMessage(Message msg)

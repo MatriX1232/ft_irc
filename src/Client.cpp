@@ -25,27 +25,6 @@ Client::Client() : _clientSd(-1), _port(0), _authenticated(false)
     // std::cout << "Created new CLIENT" << std::endl;
 }
 
-Client::Client(const Client& other)
-{
-    *this = other;
-}
-
-Client& Client::operator=(const Client& other)
-{
-    if (this != &other)
-    {
-        this->_clientSd = other._clientSd;
-        this->_ip = other._ip;
-        this->_port = other._port;
-        this->_authenticated = other._authenticated;
-        this->_currentChannel = other._currentChannel;
-        this->_nickname = other._nickname;
-        this->_realName = other._realName;
-        this->_username = other._username;
-    }
-    return *this;
-}
-
 Client::~Client()
 {
     // std::cout << "Destroyed CLIENT" << std::endl;

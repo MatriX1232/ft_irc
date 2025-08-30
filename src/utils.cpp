@@ -55,13 +55,11 @@ std::string get_current_timestamp()
 
 Client &get_client_from_channel_by_name(Channel &channel, const std::string &client_name)
 {
-    std::vector<Client> clients = channel.getClients();
-    for (int i = 0; i < (int)clients.size(); ++i)
+    std::vector<Client*> &clients = channel.getClients();
+    for (size_t i = 0; i < clients.size(); ++i)
     {
-        if (clients[i].getNickname() == client_name)
-        {
-            return clients[i];
-        }
+        if (clients[i] && clients[i]->getNickname() == client_name)
+            return *clients[i];
     }
     throw std::runtime_error("Client not found");
 }

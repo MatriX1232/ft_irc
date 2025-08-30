@@ -48,9 +48,12 @@ class Client
 	public:
 		Client();
 		Client(int sd, std::string ip, int port);
-		Client(const Client& other);
-		Client& operator=(const Client& other);
+		Client(const Client& other) = delete;
+		Client& operator=(const Client& other) = delete;
+		Client(Client&&) noexcept = default;
+		Client& operator=(Client&&) noexcept = default;
 		~Client();
+		
 		
 		int         getSd() const;
 		std::string getIp() const;

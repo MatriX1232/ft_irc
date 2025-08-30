@@ -1,4 +1,4 @@
- /* ************************************************************************** */
+/* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
@@ -28,7 +28,7 @@ Server::Server(int port, std::string password) : _port(port), _password(password
 
     // Initialize clients and channels vectors
     this->_clients.clear();
-    this->_channels.clear();
+    this->_channels.clear();    
 }
 
 Server::~Server()
@@ -124,7 +124,7 @@ int Server::accept_new_client()
         // std::cout << Outline(response, CYAN, WHITE, "New client") << std::endl;
         newClient.setAuthenticated(false);
         // this->halloy_support(newClient);
-        this->_clients.push_back(newClient);
+        this->_clients.push_back(std::move(newClient));
     }
     return 0;
 }
@@ -160,37 +160,38 @@ int Server::disconnect()
 {
     std::cout << WARNING << "Server shutdown command received" << std::endl;
     std::cout << WARNING << "Disconnecting clients from server..." << std::endl;
-    std::vector<Client> _clients = this->get_clients();
-    for (size_t i = 0; i < this->_clients.size(); ++i)
-        {
-            try
-            {
-                this->send(_clients[i], "DISCONNECTED");
-                close(_clients[i].getSd());
-                std::cout
-                    << SUCCESS
-                    << this->_clients[i].getIp() << ":" << this->_clients[i].getPort() << " | "
-                    << this->_clients[i].getNickname() << " | "
-                    << this->_clients[i].getSd() << " | "
-                    << "DISCONNECTED" << std::endl;
-            }
-            catch (const std::exception &e)
-            {
-                std::cerr << ERROR << "Error closing client socket: " << e.what() << std::endl;
-            }
-        }
+    // std::vector<Client> _clients = this->get_clients();
+    std::vector<Client> &_clients = this->get_clients();
+    for (size_t i = 0; i < _clients.size(); ++i)
+    {
         try
         {
-            close(this->_serverSd);
-            std::cout << SUCCESS << "Server socket closed" << std::endl;
-            this->_clients.clear();
-            this->_serverSd = -1;
-            this->_newSd = -1;
+            this->send(_clients[i], "DISCONNECTED");
+            close(_clients[i].getSd());
+            std::cout
+                << SUCCESS
+                << _clients[i].getIp() << ":" << _clients[i].getPort() << " | "
+                << _clients[i].getNickname() << " | "
+                << _clients[i].getSd() << " | "
+                << "DISCONNECTED" << std::endl;
         }
-        catch(const std::exception& e)
+        catch (const std::exception &e)
         {
-            std::cerr << e.what() << '\n';
+            std::cerr << ERROR << "Error closing client socket: " << e.what() << std::endl;
         }
+    }
+    try
+    {
+        close(this->_serverSd);
+        std::cout << SUCCESS << "Server socket closed" << std::endl;
+        this->_clients.clear();
+        this->_serverSd = -1;
+        this->_newSd = -1;
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
         
     return (0);
 }
@@ -272,7 +273,8 @@ int Server::assign_read_mode(int listen_fd, fd_set &readfds)
 {
     int maxfd = listen_fd;
 
-    std::vector<Client> clients = this->get_clients();
+    // std::vector<Client> clients = this->get_clients();
+    std::vector<Client> &clients = this->get_clients();
     for (size_t i = 0; i < clients.size(); ++i)
     {
         int fd = clients[i].getFd();
@@ -331,7 +333,12 @@ int Server::getFd() const
     return this->_serverSd;
 }
 
-std::vector<Client> Server::get_clients() const
+std::vector<Client>& Server::get_clients()
+{
+    return this->_clients;
+}
+
+const std::vector<Client>& Server::get_clients() const
 {
     return this->_clients;
 }
@@ -351,10 +358,12 @@ std::ostream &operator<<(std::ostream &os, const Server &server)
     os << "New Socket Descriptor: " << server._newSd << std::endl;
     os << "Password: " << server._password << std::endl;
     os << "Clients: " << std::endl;
-    std::vector<Client> _clients = server.get_clients();
+    // std::vector<Client> _clients = server.get_clients();
+    const std::vector<Client> &_clients = server.get_clients();
     for (int i = 0; i < (int)_clients.size(); i++)
     {
-        Client client = server._clients[i];
+        // Client client = server._clients[i];
+        const Client &client = server._clients[i];
         os << "  - " << client.getNickname() << " | " << client.getIp() << ":" << client.getPort() << std::endl;
     }
     os << "----------------------------------------" << std::endl;

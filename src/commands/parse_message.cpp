@@ -113,9 +113,9 @@ void parse_message(Server &server, Message &msg)
             Channel &newChannel = server.access_channel(channelName);
             // Check if client is already in the target channel
             bool alreadyInChannel = false;
-            std::vector<Client> clientsInNewChannel = newChannel.getClients();
+            std::vector<Client*> &clientsInNewChannel = newChannel.getClients();
             for (size_t i = 0; i < clientsInNewChannel.size(); ++i) {
-                if (clientsInNewChannel[i].getSd() == client.getSd()) {
+                if (clientsInNewChannel[i] && clientsInNewChannel[i]->getSd() == client.getSd()) {
                     alreadyInChannel = true;
                     break;
                 }
@@ -133,17 +133,14 @@ void parse_message(Server &server, Message &msg)
 
                 // List users in the channel
                 std::string userList = client.getNickname();
-                std::vector<Client> clientsInChannel = newChannel.getClients();
+                std::vector<Client*> &clientsInChannel = newChannel.getClients();
                 for (size_t i = 0; i < clientsInChannel.size(); ++i) {
-                    if (clientsInChannel[i].getNickname() != client.getNickname()) {
-                        userList += " " + clientsInChannel[i].getNickname();
+                    if (clientsInChannel[i] && clientsInChannel[i]->getNickname() != client.getNickname()) {
+                        userList += " " + clientsInChannel[i]->getNickname();
                     }
                 }
                 server.send(client, ":server 353 " + client.getNickname() + " = #" + channelName + " :" + userList + "\n");
                 server.send(client, ":server 366 " + client.getNickname() + " #" + channelName + " :End of /NAMES list\n");
-
-                // Notify other clients in the channel
-                // newChannel.broadcastMessage(client.getNickname() + " has joined the channel.", client);
             } else {
                 std::cout << INFO << "Client " << client.getNickname() << " is already in channel " << channelName << std::endl;
                 server.send(client, ":server 331 " + client.getNickname() + " #" + channelName + " :You are already in this channel\n");
@@ -221,7 +218,7 @@ void parse_message(Server &server, Message &msg)
             return;
         }
         
-        Channel channel = server.access_channel(arg_vector[0]);
+        Channel &channel = server.access_channel(arg_vector[0]);
         Client &client = get_client_from_channel_by_name(channel, arg_vector[1]);
         channel.removeClient(client);
         std::cout << WARNING << "Kicking user: " << arg_vector[1] << " from channel " << arg_vector[0] << std::endl;

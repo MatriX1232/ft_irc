@@ -27,7 +27,7 @@
 class Message
 {
     private:
-        Client    _sender;
+        Client*    _sender;
         std::string     _nickname;
         std::string     _content;
         std::time_t     _timestamp;
@@ -35,7 +35,7 @@ class Message
 
     public:
         Message();
-        Message(Client sender, std::string nickname, const std::string& content, std::time_t timestamp = std::time(0), int bytesRead = 0);
+        Message(Client &sender, std::string nickname, const std::string& content, std::time_t timestamp = std::time(0), int bytesRead = 0);
         Message(const Message &msg);
         ~Message();
 
