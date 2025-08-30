@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Server.cpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/03/09 11:02:26 by root              #+#    #+#             */
-/*   Updated: 2025/07/16 21:37:04 by root             ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "../include/utils.hpp"
 #include "../include/Server.hpp"
 #include "../include/Client.hpp"
@@ -210,9 +198,22 @@ void    Server::send(Client &client, std::string msg)
         return;
     }
     
-    // Make sure the message ends with the proper line termination for IRC
-    if (msg.find("\r\n") == std::string::npos && msg[std::string::npos] != '\n') {
-        msg += "\r\n";
+    // Ensure IRC line termination (CRLF)
+    if (msg.size() >= 2) {
+        if (msg.compare(msg.size() - 2, 2, "\r\n") != 0) {
+            if (!msg.empty() && msg.back() == '\n') {
+                msg[msg.size() - 1] = '\r';
+                msg += '\n';
+            } else {
+                msg += "\r\n";
+            }
+        }
+    } else {
+        if (msg.empty() || msg.back() != '\n') {
+            msg += "\r\n";
+        } else {
+            msg.insert(msg.size() - 1, "\r");
+        }
     }
     
     int bytesSent = ::send(client.getSd(), msg.c_str(), msg.length(), 0);

@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   main.cpp                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: root <root@student.42.fr>                  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/03/13 12:28:49 by root              #+#    #+#             */
-/*   Updated: 2025/07/06 14:53:51 by root             ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include <string>
 #include <vector>
 #include "../include/Server.hpp"
@@ -68,9 +56,9 @@ int main(int argc, char *argv[])
     int flags = fcntl(listen_fd, F_GETFL, 0);
     fcntl(listen_fd, F_SETFL, flags | O_NONBLOCK);
 
-    Channel channel("general", "General channel for chatting", argv[2]);
-    Channel channel2("random", "Random channel for chatting", argv[2]);
-    Channel channel3("private", "Private channel for chatting", argv[2]);
+    Channel channel("#general", "General channel for chatting", argv[2]);
+    Channel channel2("#random", "Random channel for chatting", argv[2]);
+    Channel channel3("#private", "Private channel for chatting", argv[2]);
     
     server.add_channel(channel);
     server.add_channel(channel2);

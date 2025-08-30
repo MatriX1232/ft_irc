@@ -130,8 +130,8 @@ void parse_message(Server &server, Message &msg)
                 std::cout << INFO << "Client " << client.getNickname() << " joined channel " << channelName << std::endl;
 
                 // Send server responses
-                server.send(client, ":server 332 " + client.getNickname() + " #" + channelName + " :" + newChannel.getTopic() + "\n");
-                server.send(client, ":server 333 " + client.getNickname() + " #" + channelName + " " + client.getNickname() + " " + get_current_timestamp() + "\n");
+                server.send(client, ":server 332 " + client.getNickname() + " " + channelName + " :" + newChannel.getTopic());
+                server.send(client, ":server 333 " + client.getNickname() + " " + channelName + " " + client.getNickname() + " " + get_current_timestamp());
 
                 // List users in the channel
                 std::string userList = client.getNickname();
@@ -141,8 +141,8 @@ void parse_message(Server &server, Message &msg)
                         userList += " " + clientsInChannel[i]->getNickname();
                     }
                 }
-                server.send(client, ":server 353 " + client.getNickname() + " = #" + channelName + " :" + userList + "\n");
-                server.send(client, ":server 366 " + client.getNickname() + " #" + channelName + " :End of /NAMES list\n");
+                server.send(client, ":server 353 " + client.getNickname() + " = " + channelName + " :" + userList);
+                server.send(client, ":server 366 " + client.getNickname() + " " + channelName + " :End of /NAMES list");
             } else {
                 std::cout << INFO << "Client " << client.getNickname() << " is already in channel " << channelName << std::endl;
                 server.send(client, ":server 331 " + client.getNickname() + " #" + channelName + " :You are already in this channel\n");
@@ -157,23 +157,25 @@ void parse_message(Server &server, Message &msg)
     else if (command == "LIST")
     {
         Client &client = msg.getSender();
-        server.send(client, ":server 321 " + client.getNickname() + " :Users Name" + "\n");
+        server.send(client, ":server 321 " + client.getNickname() + " Channel :Users Name");
 
-        std::vector<Channel> channels = server.get_channels();
+        std::vector<Channel> &channels = server.get_channels();
         std::cout << INFO << "Available channels:" << std::endl;
         for (size_t i = 0; i < channels.size(); ++i)
         {
             int clientCount = channels[i].getClients().size();
             if (channels[i].getName().empty())
             {
-                std::string response = append_number(" #<no-name> ", clientCount);
-                response += " :" + channels[i].getTopic() + "\n";
+                std::string response = append_number(" <no-name> ", clientCount);
+                response += " :" + channels[i].getTopic();
                 server.send(client, ":server 322 " + client.getNickname() + response);
             }
             else
             {
-                std::string response = append_number(" #" + channels[i].getName() + " ", clientCount);
-                response += " :" + channels[i].getTopic() + "\n";
+                // Do NOT add another '#', name already includes it.
+                std::string response = " " + channels[i].getName() + " ";
+                response = append_number(response, clientCount);
+                response += " :" + channels[i].getTopic();
                 server.send(client, ":server 322 " + client.getNickname() + response);
             }
             std::cout << channels[i].getName() << " | Clients: " << clientCount << " | Topic: " << channels[i].getTopic() << std::endl;
