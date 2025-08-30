@@ -235,6 +235,18 @@ void parse_message(Server &server, Message &msg)
         std::string response = "PONG :" + arg_vector[0] + "\r\n";
         server.send(msg.getSender(), response);
     }
+    else if (command == "QUIT")
+    {
+        Client &client = msg.getSender();
+        std::cout << WARNING << "Client " << client.getNickname() << " is disconnecting." << std::endl;
+        server.send(client, ":server ERROR :Closing Link: " + client.getNickname() + "\r\n");
+        close(client.getSd());
+        // Optionally, remove the client from all channels
+        std::vector<Channel> &channels = server.get_channels();
+        for (size_t i = 0; i < channels.size(); ++i) {
+            channels[i].removeClient(client);
+        }
+    }
     else
     {
         std::cerr << ERROR << "Unknown command: " << command << std::endl;
