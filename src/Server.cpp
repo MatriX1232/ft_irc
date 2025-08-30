@@ -4,6 +4,7 @@
 #include "../include/Message.hpp"
 #include "../include/Channel.hpp"
 #include "../include/Outline.hpp"
+#include "../include/Commands.hpp"
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -287,11 +288,17 @@ int Server::assign_read_mode(int listen_fd, fd_set &readfds)
 
 Channel &Server::access_channel(std::string channelName)
 {
+    // Accept both "#general" and "general"
+    std::string key = channelName;
+    if (!key.empty() && key[0] == '#')
+        key = key.substr(1);
+
     for (size_t i = 0; i < this->_channels.size(); ++i)
     {
-        if (this->_channels[i].getName() == channelName)
+        const std::string &stored = this->_channels[i].getName();
+        if (stored == key)
         {
-            std::cout << INFO << "Channel found: <" << this->_channels[i].getName() << ">" << std::endl;
+            std::cout << INFO << "Channel found: <" << stored << ">" << std::endl;
             return (this->_channels[i]);
         }
     }
@@ -302,6 +309,24 @@ Channel &Server::access_channel(std::string channelName)
 void    Server::add_channel(Channel &channel)
 {
     this->_channels.push_back(channel);
+}
+
+void Server::remove_client(int fd)
+{
+    for (size_t i = 0; i < _clients.size(); ++i)
+    {
+        if (_clients[i].getSd() == fd)
+        {
+            for (size_t c = 0; c < _channels.size(); ++c)
+                _channels[c].removeClient(_clients[i]);
+            std::cout << INFO << "Removing client " << _clients[i].getNickname()
+                      << " (" << _clients[i].getIp() << ":" << _clients[i].getPort()
+                      << ", fd=" << fd << ")" << std::endl;
+            _clients.erase(_clients.begin() + i);
+            return;
+        }
+    }
+    std::cout << WARNING << "Requested to remove unknown client fd=" << fd << std::endl;
 }
 
 std::string Server::get_serverName() const

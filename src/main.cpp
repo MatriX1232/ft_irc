@@ -81,14 +81,6 @@ int main(int argc, char *argv[])
         {
             if (server.accept_new_client() < 0)
                 std::cerr << ERROR << "Error accepting new client" << std::endl;
-            // else
-            // {
-            //     Client &newClient = server.get_clients().back();
-            //     server.send(newClient, ":server 001 " + newClient.getNickname() + " :Welcome to the IRC server");
-            //     server.send(newClient, ":server 002 " + newClient.getNickname() + " :Your host is server, running version 1.0");
-            //     server.send(newClient, ":server 003 " + newClient.getNickname() + " :This server was created today");
-            //     server.send(newClient, ":server 004 " + newClient.getNickname() + " server 1.0 o o");
-            // }
         }
         if (to_shutdown)
             break;
@@ -101,13 +93,19 @@ int main(int argc, char *argv[])
             {
                 Message msg = server.recv(client); // CHANGED: read into the real client
                 if (!msg.isValid())
-                    continue;
+                {
+                    // Treat as disconnect and purge client to avoid EBADF in select
+                    std::cout << INFO << "Peer disconnected: " << client.getNickname() << " fd=" << client.getFd() << std::endl;
+                    close(client.getSd());
+                    server.remove_client(client.getSd());
+                    break; // rebuild fd_set on next loop
+                }
                 if (msg.getContent() == SERVER_SHUTDOWN)
                 {
                     std::cout << "\n\n" << server << "\n\n";
                     break;
                 }
-                // CHANGED: decide based on the real client's auth state, not msg.getSender() (which may be a stale copy)
+                std::cout << INFO << "Received message from " << client.getNickname() << ": " << msg.getContent() << std::endl;
                 if (!client.isAuthenticated())
                 {
                     try {

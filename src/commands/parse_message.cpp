@@ -11,6 +11,15 @@
 #include "../../include/Outline.hpp"
 
 
+// Small helpers for channel name normalization
+static inline std::string strip_hash(const std::string &name) {
+    return (!name.empty() && name[0] == '#') ? name.substr(1) : name;
+}
+static inline std::string ensure_hash(const std::string &name) {
+    return (!name.empty() && name[0] == '#') ? name : "#" + name;
+}
+
+
 void parse_message(Server &server, Message &msg)
 {
     const std::string content = msg.getContent();
@@ -83,10 +92,7 @@ void parse_message(Server &server, Message &msg)
         Client &client = msg.getSender();
         client.setUsername(arg_vector[0]);
         client.setRealName(arg_vector[1]);
-        
-        std::string response = ":server 001 " + client.getNickname() + " :Welcome to the IRC server, " + client.getNickname() + "!";
-        response += " You are now known as " + client.getNickname() + " (" + client.getUsername() + ") - " + client.getRealName() + "\n";
-        server.send(client, response);
+        // Removed sending 001 here; registration numerics are sent on CAP END.
     }
     else if (command == "JOIN")
     {
@@ -95,24 +101,25 @@ void parse_message(Server &server, Message &msg)
             return;
         }
 
-        const std::string& channelName = arg_vector[0];
+        const std::string rawName = arg_vector[0];
+        const std::string chan = strip_hash(rawName);
         Client &client = msg.getSender();
         const std::string currentChannelName = client.getCurrentChannel();
 
 
         std::cout << "\n\n" << WARNING << "Current channel: " << currentChannelName << std::endl;
-        std::cout << WARNING << "Joining channel: " << channelName << std::endl;
+        std::cout << WARNING << "Joining channel: " << chan << std::endl;
 
         try {
             // If client is already in a channel, remove them from it
-            if (!currentChannelName.empty() && currentChannelName != channelName) {
+            if (!currentChannelName.empty() && currentChannelName != chan) {
                 Channel &oldChannel = server.access_channel(currentChannelName);
                 oldChannel.removeClient(client);
                 std::cout << INFO << "Client " << client.getNickname() << " left channel " << currentChannelName << std::endl;
             }
 
             // Join the new channel
-            Channel &newChannel = server.access_channel(channelName);
+            Channel &newChannel = server.access_channel(chan);
             // Check if client is already in the target channel
             bool alreadyInChannel = false;
             std::vector<Client*> &clientsInNewChannel = newChannel.getClients();
@@ -125,15 +132,23 @@ void parse_message(Server &server, Message &msg)
 
             if (!alreadyInChannel) {
                 newChannel.addClient(client);
-                std::cout << ERROR << "Before entering function: " << channelName << std::endl;
-                client.setCurrentChannel(channelName);
-                std::cout << INFO << "Client " << client.getNickname() << " joined channel " << channelName << std::endl;
+                client.setCurrentChannel(chan);
+                std::cout << INFO << "Client " << client.getNickname() << " joined channel " << chan << std::endl;
 
-                // Send server responses
-                server.send(client, ":server 332 " + client.getNickname() + " #" + channelName + " :" + newChannel.getTopic());
-                server.send(client, ":server 333 " + client.getNickname() + " #" + channelName + " " + client.getNickname() + " " + get_current_timestamp());
+                // 1) Broadcast JOIN to all members (Halloy needs this to enable input)
+                const std::string vis = ensure_hash(chan);
+                const std::string prefix = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIp();
+                for (size_t i = 0; i < clientsInNewChannel.size(); ++i) {
+                    if (clientsInNewChannel[i]) {
+                        server.send(*clientsInNewChannel[i], prefix + " JOIN " + vis);
+                    }
+                }
 
-                // List users in the channel
+                // 2) Topic (+ who/time) numerics
+                server.send(client, ":server 332 " + client.getNickname() + " " + vis + " :" + newChannel.getTopic());
+                server.send(client, ":server 333 " + client.getNickname() + " " + vis + " " + client.getNickname() + " " + get_current_timestamp());
+
+                // 3) Names + end of names
                 std::string userList = client.getNickname();
                 std::vector<Client*> &clientsInChannel = newChannel.getClients();
                 for (size_t i = 0; i < clientsInChannel.size(); ++i) {
@@ -141,17 +156,78 @@ void parse_message(Server &server, Message &msg)
                         userList += " " + clientsInChannel[i]->getNickname();
                     }
                 }
-                server.send(client, ":server 353 " + client.getNickname() + " = " + channelName + " :" + userList);
-                server.send(client, ":server 366 " + client.getNickname() + " " + channelName + " :End of /NAMES list");
+                server.send(client, ":server 353 " + client.getNickname() + " = " + vis + " :" + userList);
+                server.send(client, ":server 366 " + client.getNickname() + " " + vis + " :End of /NAMES list");
             } else {
-                std::cout << INFO << "Client " << client.getNickname() << " is already in channel " << channelName << std::endl;
-                server.send(client, ":server 331 " + client.getNickname() + " #" + channelName + " :You are already in this channel\n");
+                server.send(client, ":server 331 " + client.getNickname() + " " + ensure_hash(chan) + " :You are already in this channel");
             }
-
         } catch (const std::runtime_error& e) {
             std::cerr << ERROR << "Error joining channel: " << e.what() << std::endl;
-            // Optionally, send an error message back to the client
-            // server.send(client, "ERROR :Could not join channel " + channelName + ". " + e.what());
+        }
+    }
+    else if (command == "PRIVMSG")
+    {
+        if (args.empty()) {
+            server.send(msg.getSender(), ":server 412 " + msg.getSender().getNickname() + " :No text to send");
+            return;
+        }
+
+        // Parse: PRIVMSG <target> :<message>
+        // Extract target
+        size_t sp = args.find(' ');
+        if (sp == std::string::npos) {
+            server.send(msg.getSender(), ":server 411 " + msg.getSender().getNickname() + " :No recipient given (PRIVMSG)");
+            return;
+        }
+        std::string target = args.substr(0, sp);
+        // Extract message after " :"
+        std::string text;
+        size_t col = args.find(" :");
+        if (col != std::string::npos) {
+            text = args.substr(col + 2);
+        } else {
+            // Fallback: rest after first space
+            text = args.substr(sp + 1);
+        }
+        if (text.empty()) {
+            server.send(msg.getSender(), ":server 412 " + msg.getSender().getNickname() + " :No text to send");
+            return;
+        }
+
+        const std::string prefix = ":" + msg.getSender().getNickname() + "!" + msg.getSender().getUsername() + "@" + msg.getSender().getIp();
+
+        if (!target.empty() && target[0] == '#') {
+            // Channel message
+            const std::string chan = strip_hash(target);
+            try {
+                Channel &channel = server.access_channel(chan);
+                std::vector<Client*> &clientsInChannel = channel.getClients();
+                const std::string vis = ensure_hash(chan);
+                for (size_t i = 0; i < clientsInChannel.size(); ++i) {
+                    if (clientsInChannel[i]) {
+                        // Deliver to everyone including sender (usual IRC behavior)
+                        server.send(*clientsInChannel[i], prefix + " PRIVMSG " + vis + " :" + text);
+                    }
+                }
+            } catch (const std::runtime_error&) {
+                server.send(msg.getSender(), ":server 403 " + msg.getSender().getNickname() + " " + target + " :No such channel");
+            }
+        } else {
+            // User-to-user message
+            bool delivered = false;
+            std::vector<Client> &clients = server.get_clients();
+            for (size_t i = 0; i < clients.size(); ++i) {
+                if (clients[i].getNickname() == target) {
+                    server.send(clients[i], prefix + " PRIVMSG " + target + " :" + text);
+                    // Echo back to sender so UI displays it immediately
+                    server.send(msg.getSender(), prefix + " PRIVMSG " + target + " :" + text);
+                    delivered = true;
+                    break;
+                }
+            }
+            if (!delivered) {
+                server.send(msg.getSender(), ":server 401 " + msg.getSender().getNickname() + " " + target + " :No such nick");
+            }
         }
     }
     else if (command == "LIST")
@@ -164,20 +240,10 @@ void parse_message(Server &server, Message &msg)
         for (size_t i = 0; i < channels.size(); ++i)
         {
             int clientCount = channels[i].getClients().size();
-            if (channels[i].getName().empty())
-            {
-                std::string response = append_number(" <no-name> ", clientCount);
-                response += " :" + channels[i].getTopic();
-                server.send(client, ":server 322 " + client.getNickname() + response);
-            }
-            else
-            {
-                // Do NOT add another '#', name already includes it.
-                std::string response = " " + channels[i].getName() + " ";
-                response = append_number(response, clientCount);
-                response += " :" + channels[i].getTopic();
-                server.send(client, ":server 322 " + client.getNickname() + response);
-            }
+            std::string response = " " + ensure_hash(channels[i].getName()) + " ";
+            response = append_number(response, clientCount);
+            response += " :" + channels[i].getTopic();
+            server.send(client, ":server 322 " + client.getNickname() + response);
             std::cout << channels[i].getName() << " | Clients: " << clientCount << " | Topic: " << channels[i].getTopic() << std::endl;
         }
         server.send(client, ":server 323 " + client.getNickname() + " :End of /LIST");
@@ -222,11 +288,11 @@ void parse_message(Server &server, Message &msg)
             return;
         }
         
-        Channel &channel = server.access_channel(arg_vector[0]);
+        Channel &channel = server.access_channel(strip_hash(arg_vector[0]));
         Client &client = get_client_from_channel_by_name(channel, arg_vector[1]);
         channel.removeClient(client);
         std::cout << WARNING << "Kicking user: " << arg_vector[1] << " from channel " << arg_vector[0] << std::endl;
-        std::string response = ":server  KICK " + arg_vector[0] + " " + arg_vector[1] + " :You have been kicked from the channel\n";
+        std::string response = ":server  KICK " + ensure_hash(strip_hash(arg_vector[0])) + " " + arg_vector[1] + " :You have been kicked from the channel\n";
         server.send(client, response);
     }
     else if (command == "PING")
@@ -242,19 +308,19 @@ void parse_message(Server &server, Message &msg)
             return;
         }
 
-        const std::string& channelName = arg_vector[0];
+        const std::string chan = strip_hash(arg_vector[0]);
         Client &client = msg.getSender();
 
         try
         {
-            Channel &channel = server.access_channel(channelName);
-            if (channel.getClients().empty() || &channel == NULL)
-                return (server.send(client, ":server 315 " + client.getNickname() + " " + channelName + " :End of /WHO list\r\n"));
+            Channel &channel = server.access_channel(chan);
+            if (channel.getClients().empty())
+                return (server.send(client, ":server 315 " + client.getNickname() + " " + ensure_hash(chan) + " :End of /WHO list\r\n"));
             std::vector<Client*> &clientsInChannel = channel.getClients();
             for (size_t i = 0; i < clientsInChannel.size(); ++i) {
                 if (clientsInChannel[i])
                 {
-                    std::string response = ":server 352 " + client.getNickname() + " " + channelName + " " +
+                    std::string response = ":server 352 " + client.getNickname() + " " + ensure_hash(chan) + " " +
                                            clientsInChannel[i]->getUsername() + " " +
                                            clientsInChannel[i]->getIp() + " server " +
                                            clientsInChannel[i]->getNickname() + " H :0 " +
@@ -262,23 +328,19 @@ void parse_message(Server &server, Message &msg)
                     server.send(client, response);
                 }
             }
-            server.send(client, ":server 315 " + client.getNickname() + " " + channelName + " :End of /WHO list\r\n");
+            server.send(client, ":server 315 " + client.getNickname() + " " + ensure_hash(chan) + " :End of /WHO list\r\n");
         } catch (const std::runtime_error& e) {
             std::cerr << ERROR << "Error processing WHO command: " << e.what() << std::endl;
-            server.send(client, ":server 401 " + client.getNickname() + " " + channelName + " :No such channel\r\n");
+            server.send(client, ":server 401 " + client.getNickname() + " " + ensure_hash(chan) + " :No such channel\r\n");
         }
     }
     else if (command == "QUIT")
     {
         Client &client = msg.getSender();
         std::cout << WARNING << "Client " << client.getNickname() << " is disconnecting." << std::endl;
-        // server.send(client, ":server ERROR :Closing Link: " + client.getNickname() + "\r\n");
         close(client.getSd());
-        // Optionally, remove the client from all channels
-        std::vector<Channel> &channels = server.get_channels();
-        for (size_t i = 0; i < channels.size(); ++i) {
-            channels[i].removeClient(client);
-        }
+        server.remove_client(client.getSd());
+        return;
     }
     else
     {
@@ -293,77 +355,100 @@ void    parse_initial_message(Server &server, Client &client, std::string cmd)
 
     if (arg_vector[0] == "PASS")
     {
-        // Channel &channel = server.access_channel(msg.getSender().getCurrentChannel());
-        // std::cout << Outline("Server password: pass | User provided password: " + arg_vector[0], RED, RED, "");
-        // std::cout << "Password: " << arg_vector[0] << std::endl;
+        if (arg_vector.size() < 2) {
+            server.send(client, ":server 464 * :Password required");
+            return;
+        }
         if (server.check_password(arg_vector[1]))
             std::cout << SUCCESS << "Password accepted for client:\n" << client << std::endl;
         else
         {
             std::cerr << ERROR << "Incorrect password for client:\n" << client << std::endl;
-            server.send(client, "[*" + server.get_serverName() + "*] " + "Password incorrect.");
+            server.send(client, ":" + server.get_serverName() + " NOTICE * :Password incorrect");
             return;
         }
     }
     else if (arg_vector[0] == "CAP")
     {
-        if (arg_vector.empty() || arg_vector[1].empty())
-        {
-            std::cerr << ERROR << "CAP command requires a valid argument" << std::endl;
+        if (arg_vector.size() < 2) {
+            server.send(client, ":" + server.get_serverName() + " CAP * NAK :Missing subcommand");
             return;
         }
-        if (arg_vector[1] == "LS")
+
+        const std::string sub = arg_vector[1];
+
+        if (sub == "LS")
         {
-            server.send(client, ":server  CAP * LS :\r\n");
+            // Reply to CAP LS with an (empty) capabilities list for now.
+            server.send(client, ":" + server.get_serverName() + " CAP * LS :");
         }
-        else if (arg_vector[1] == "END")
+        else if (sub == "REQ")
         {
-            std::cout << SUCCESS << "Client authenticated: " << client.getNickname() << std::endl;
-            client.setAuthenticated(true);
-            server.send(client, ":" + server.get_serverName() + " CAP * END");
-        }
-        else if (arg_vector[1] == "REQ")
-        {
-            if (arg_vector.size() < 2 || arg_vector[1].empty())
-            {
-                std::cerr << ERROR << "CAP REQ command requires a valid capability" << std::endl;
+            // Typical client sends: CAP REQ :cap1 cap2
+            // Our split() keeps the colon on the first capability token; reassemble trailing list:
+            if (arg_vector.size() < 3) {
+                server.send(client, ":" + server.get_serverName() + " CAP * NAK :");
                 return;
             }
-            server.send(client, ":server  CAP * ACK " + arg_vector[2]);
+            std::string caps;
+            for (size_t i = 2; i < arg_vector.size(); ++i) {
+                if (!caps.empty()) caps += " ";
+                caps += arg_vector[i];
+            }
+            // ACK what was requested (or validate if you want)
+            server.send(client, ":" + server.get_serverName() + " CAP * ACK " + (caps[0] == ':' ? caps : ":" + caps));
+        }
+        else if (sub == "END")
+        {
+            // Require USER (and NICK) to be set before accepting CAP END.
+            const bool hasNick = !client.getNickname().empty();
+            const bool hasUser = !client.getUsername().empty();
+            if (!hasNick || !hasUser)
+            {
+                server.send(client, ":" + server.get_serverName() + " NOTICE * :Send CAP END after NICK and USER");
+                return;
+            }
+
+            std::cout << SUCCESS << "Client authenticated: " << client.getNickname() << std::endl;
+            client.setAuthenticated(true);
+
+            const std::string nick = client.getNickname().empty() ? "*" : client.getNickname();
+
+            // 001/002/004 welcome numerics
+            server.send(client, ":" + server.get_serverName() + " 001 " + nick + " :Welcome to the IRC server, " + nick + "!");
+            server.send(client, ":" + server.get_serverName() + " 002 " + nick + " :Your host is " + server.get_serverName() + ", running version 1.0");
+            server.send(client, ":" + server.get_serverName() + " 004 " + nick + " " + server.get_serverName() + " 1.0 o o");
+            // MOTD sequence to signal end of registration and enable auto-join
+            server.send(client, ":" + server.get_serverName() + " 375 " + nick + " :- " + server.get_serverName() + " Message of the day -");
+            server.send(client, ":" + server.get_serverName() + " 372 " + nick + " :- Welcome to " + server.get_serverName());
+            server.send(client, ":" + server.get_serverName() + " 372 " + nick + " :- Type /join #general to start chatting.");
+            server.send(client, ":" + server.get_serverName() + " 376 " + nick + " :End of /MOTD command");
         }
         else
         {
-            std::cerr << ERROR << "Unknown CAP command: " << arg_vector[1] << std::endl;
-            server.send(client, ":server  CAP * NAK :Unknown command");
+            server.send(client, ":" + server.get_serverName() + " CAP * NAK :Unknown subcommand");
         }
     }
     else if (arg_vector[0] == "NICK")
     {
-        if (arg_vector.empty() || arg_vector[1].empty()) {
+        if (arg_vector.size() < 2 || arg_vector[1].empty()) {
             std::cerr << ERROR << "NICK command requires a valid nickname" << std::endl;
             return;
         }
-        // Check if the nickname is already taken
         for (int i = 0; i < (int)server.get_clients().size(); ++i)
         {
             Client &c = server.get_clients()[i];
             if (c.getNickname() == arg_vector[1]) {
                 std::cerr << ERROR << "Nickname already taken: " << arg_vector[1] << std::endl;
-                server.send(client, "ERROR: Nickname already taken");
+                server.send(client, "ERROR :Nickname already taken");
                 return;
             }
         }
-
         client.setNickname(arg_vector[1]);
         std::cout << INFO << "Client nickname set to: " << client.getNickname() << std::endl;
-
-        // Optionally, send a confirmation message back to the client
-        // server.send(client, "NICK :You are now known as " + newNickname);
     }
     else if (arg_vector[0] == "USER")
     {
-        // Check that we have at least 4 parameters for USER command
-        // USER <username> <mode> <unused> :<realname>
         if (arg_vector.size() < 4) {
             std::cerr << ERROR << "USER command requires username, mode, unused, and realname" << std::endl;
             return;
@@ -385,14 +470,6 @@ void    parse_initial_message(Server &server, Client &client, std::string cmd)
         
         client.setUsername(arg_vector[1]);
         client.setRealName(realname);
-        
-        // Send a properly formatted welcome message
-        std::string response = ":server 001 " + client.getNickname() + " :Welcome to the IRC server, " + client.getNickname() + "!\r\n";
-        response += ":server 002 " + client.getNickname() + " :Your host is server, running version 1.0\r\n";
-        response += ":server 003 " + client.getNickname() + " :This server was created today\r\n";
-        response += ":server 004 " + client.getNickname() + " server 1.0 o o\r\n";
-        server.send(client, response);\
-        std::cout << client << std::endl;
     }
     else
     {
