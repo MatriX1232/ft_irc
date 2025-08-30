@@ -18,6 +18,8 @@ void parse_message(Server &server, Message &msg)
     const std::string args = content.substr(content.find(' ') + 1);
     const std::vector<std::string> arg_vector = split(args, ' ');
 
+    std::cout << "ARG_VECTOR[0]: " << arg_vector[0] << std::endl;
+
     if (arg_vector.empty())
     {
         std::cerr << ERROR << "No arguments provided" << std::endl;
@@ -28,7 +30,7 @@ void parse_message(Server &server, Message &msg)
         std::cerr << ERROR << "Empty message received" << std::endl;
         return;
     }
-
+    
     if (command == "PASS")
     {
         Channel &channel = server.access_channel(msg.getSender().getCurrentChannel());
@@ -224,6 +226,12 @@ void parse_message(Server &server, Message &msg)
         std::cout << WARNING << "Kicking user: " << arg_vector[1] << " from channel " << arg_vector[0] << std::endl;
         std::string response = ":server  KICK " + arg_vector[0] + " " + arg_vector[1] + " :You have been kicked from the channel\n";
         server.send(client, response);
+    }
+    else if (command == "PING")
+    {
+        std::cout << INFO << "Received PING from " << msg.getSender().getNickname() << std::endl;
+        std::string response = "PONG :" + arg_vector[0] + "\r\n";
+        server.send(msg.getSender(), response);
     }
     else
     {
