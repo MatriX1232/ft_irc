@@ -235,11 +235,44 @@ void parse_message(Server &server, Message &msg)
         std::string response = "PONG :" + arg_vector[0] + "\r\n";
         server.send(msg.getSender(), response);
     }
+    else if (command == "WHO")
+    {
+        if (arg_vector.empty() || arg_vector[0].empty()) {
+            std::cerr << ERROR << "WHO command requires a valid channel name" << std::endl;
+            return;
+        }
+
+        const std::string& channelName = arg_vector[0];
+        Client &client = msg.getSender();
+
+        try
+        {
+            Channel &channel = server.access_channel(channelName);
+            if (channel.getClients().empty() || &channel == NULL)
+                return (server.send(client, ":server 315 " + client.getNickname() + " " + channelName + " :End of /WHO list\r\n"));
+            std::vector<Client*> &clientsInChannel = channel.getClients();
+            for (size_t i = 0; i < clientsInChannel.size(); ++i) {
+                if (clientsInChannel[i])
+                {
+                    std::string response = ":server 352 " + client.getNickname() + " " + channelName + " " +
+                                           clientsInChannel[i]->getUsername() + " " +
+                                           clientsInChannel[i]->getIp() + " server " +
+                                           clientsInChannel[i]->getNickname() + " H :0 " +
+                                           clientsInChannel[i]->getRealName() + "\r\n";
+                    server.send(client, response);
+                }
+            }
+            server.send(client, ":server 315 " + client.getNickname() + " " + channelName + " :End of /WHO list\r\n");
+        } catch (const std::runtime_error& e) {
+            std::cerr << ERROR << "Error processing WHO command: " << e.what() << std::endl;
+            server.send(client, ":server 401 " + client.getNickname() + " " + channelName + " :No such channel\r\n");
+        }
+    }
     else if (command == "QUIT")
     {
         Client &client = msg.getSender();
         std::cout << WARNING << "Client " << client.getNickname() << " is disconnecting." << std::endl;
-        server.send(client, ":server ERROR :Closing Link: " + client.getNickname() + "\r\n");
+        // server.send(client, ":server ERROR :Closing Link: " + client.getNickname() + "\r\n");
         close(client.getSd());
         // Optionally, remove the client from all channels
         std::vector<Channel> &channels = server.get_channels();
