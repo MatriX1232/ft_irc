@@ -56,9 +56,9 @@ int main(int argc, char *argv[])
     int flags = fcntl(listen_fd, F_GETFL, 0);
     fcntl(listen_fd, F_SETFL, flags | O_NONBLOCK);
 
-    Channel channel("general", "General channel for chatting", argv[2]);
-    Channel channel2("random", "Random channel for chatting", argv[2]);
-    Channel channel3("private", "Private channel for chatting", argv[2]);
+    Channel channel("general", "General channel for chatting", "");
+    Channel channel2("random", "Random channel for chatting", "");
+    Channel channel3("private", "Private channel for chatting", "");
     
     server.add_channel(channel);
     server.add_channel(channel2);

@@ -19,6 +19,51 @@ static inline std::string ensure_hash(const std::string &name) {
     return (!name.empty() && name[0] == '#') ? name : "#" + name;
 }
 
+// Helper: find client by nickname
+static Client* find_client_by_nick(Server &server, const std::string &nick) {
+    std::vector<Client> &clients = server.get_clients();
+    for (size_t i = 0; i < clients.size(); ++i) {
+        if (clients[i].getNickname() == nick)
+            return &clients[i];
+    }
+    return NULL;
+}
+
+// New: command id mapping for switch
+enum Cmd {
+    CMD_UNKNOWN = 0,
+    CMD_PASS,
+    CMD_NICK,
+    CMD_USER,
+    CMD_JOIN,
+    CMD_PRIVMSG,
+    CMD_LIST,
+    CMD_CAP,
+    CMD_KICK,
+    CMD_INVITE,
+    CMD_TOPIC,
+    CMD_MODE,
+    CMD_PING,
+    CMD_WHO,
+    CMD_QUIT
+};
+static inline Cmd command_id(const std::string &s) {
+    if (s == "PASS") return CMD_PASS;
+    if (s == "NICK") return CMD_NICK;
+    if (s == "USER") return CMD_USER;
+    if (s == "JOIN") return CMD_JOIN;
+    if (s == "PRIVMSG") return CMD_PRIVMSG;
+    if (s == "LIST") return CMD_LIST;
+    if (s == "CAP") return CMD_CAP;
+    if (s == "KICK") return CMD_KICK;
+    if (s == "INVITE") return CMD_INVITE;
+    if (s == "TOPIC") return CMD_TOPIC;
+    if (s == "MODE") return CMD_MODE;
+    if (s == "PING") return CMD_PING;
+    if (s == "WHO") return CMD_WHO;
+    if (s == "QUIT") return CMD_QUIT;
+    return CMD_UNKNOWN;
+}
 
 void parse_message(Server &server, Message &msg)
 {
@@ -26,8 +71,6 @@ void parse_message(Server &server, Message &msg)
     const std::string command = content.substr(0, content.find(' '));
     const std::string args = content.substr(content.find(' ') + 1);
     const std::vector<std::string> arg_vector = split(args, ' ');
-
-    std::cout << "ARG_VECTOR[0]: " << arg_vector[0] << std::endl;
 
     if (arg_vector.empty())
     {
@@ -40,312 +83,526 @@ void parse_message(Server &server, Message &msg)
         return;
     }
     
-    if (command == "PASS")
+    switch (command_id(command))
     {
-        Channel &channel = server.access_channel(msg.getSender().getCurrentChannel());
-
-        if (channel.check_password(arg_vector[0]))
+        case CMD_PASS:
         {
-            msg.getSender().setAuthenticated(true);
-            std::cout << SUCCESS << "Password accepted for client: " << msg.getSender().getFd() << std::endl;
-        }
-        else
-        {
-            std::cerr << ERROR << "Incorrect password for client: " << msg.getSender().getNickname() << std::endl;
-            close(msg.getSender().getSd());
-            return;
-        }
-    }
-    else if (command == "NICK")
-    {
-        if (arg_vector.empty() || arg_vector[0].empty()) {
-            std::cerr << ERROR << "NICK command requires a valid nickname" << std::endl;
-            return;
-        }
+            Channel &channel = server.access_channel(msg.getSender().getCurrentChannel());
 
-        Client &client = msg.getSender();
-        const std::string newNickname = arg_vector[0];
-
-        // Check if the nickname is already taken
-        for (int i = 0; i < (int)server.get_clients().size(); ++i)
-        {
-            Client &c = server.get_clients()[i];
-            if (c.getNickname() == newNickname) {
-                std::cerr << ERROR << "Nickname already taken: " << newNickname << std::endl;
-                server.send(client, "ERROR: Nickname already taken");
+            if (channel.check_password(arg_vector[0]))
+            {
+                msg.getSender().setAuthenticated(true);
+                std::cout << SUCCESS << "Password accepted for client: " << msg.getSender().getFd() << std::endl;
+            }
+            else
+            {
+                std::cerr << ERROR << "Incorrect password for client: " << msg.getSender().getNickname() << std::endl;
+                close(msg.getSender().getSd());
                 return;
             }
+            break;
         }
-
-        client.setNickname(newNickname);
-        std::cout << INFO << "Client nickname set to: " << client.getNickname() << std::endl;
-
-        // Optionally, send a confirmation message back to the client
-        // server.send(client, "NICK :You are now known as " + newNickname);
-    }
-    else if (command == "USER")
-    {
-        if (arg_vector.size() < 2 || arg_vector[0].empty() || arg_vector[1].empty()) {
-            std::cerr << ERROR << "USER command requires a valid username and real name" << std::endl;
-            return;
-        }
-        Client &client = msg.getSender();
-        client.setUsername(arg_vector[0]);
-        client.setRealName(arg_vector[1]);
-        // Removed sending 001 here; registration numerics are sent on CAP END.
-    }
-    else if (command == "JOIN")
-    {
-        if (arg_vector.empty() || arg_vector[0].empty()) {
-            std::cerr << ERROR << "JOIN command requires a valid channel name" << std::endl;
-            return;
-        }
-
-        const std::string rawName = arg_vector[0];
-        const std::string chan = strip_hash(rawName);
-        Client &client = msg.getSender();
-        const std::string currentChannelName = client.getCurrentChannel();
-
-
-        std::cout << "\n\n" << WARNING << "Current channel: " << currentChannelName << std::endl;
-        std::cout << WARNING << "Joining channel: " << chan << std::endl;
-
-        try {
-            // If client is already in a channel, remove them from it
-            if (!currentChannelName.empty() && currentChannelName != chan) {
-                Channel &oldChannel = server.access_channel(currentChannelName);
-                oldChannel.removeClient(client);
-                std::cout << INFO << "Client " << client.getNickname() << " left channel " << currentChannelName << std::endl;
+        case CMD_NICK:
+        {
+            if (arg_vector.empty() || arg_vector[0].empty()) {
+                std::cerr << ERROR << "NICK command requires a valid nickname" << std::endl;
+                return;
             }
 
-            // Join the new channel
-            Channel &newChannel = server.access_channel(chan);
-            // Check if client is already in the target channel
-            bool alreadyInChannel = false;
-            std::vector<Client*> &clientsInNewChannel = newChannel.getClients();
-            for (size_t i = 0; i < clientsInNewChannel.size(); ++i) {
-                if (clientsInNewChannel[i] && clientsInNewChannel[i]->getSd() == client.getSd()) {
-                    alreadyInChannel = true;
-                    break;
+            Client &client = msg.getSender();
+            const std::string newNickname = arg_vector[0];
+
+            for (int i = 0; i < (int)server.get_clients().size(); ++i)
+            {
+                Client &c = server.get_clients()[i];
+                if (c.getNickname() == newNickname) {
+                    std::cerr << ERROR << "Nickname already taken: " << newNickname << std::endl;
+                    server.send(client, "ERROR: Nickname already taken");
+                    return;
                 }
             }
 
-            if (!alreadyInChannel) {
+            client.setNickname(newNickname);
+            std::cout << INFO << "Client nickname set to: " << client.getNickname() << std::endl;
+            break;
+        }
+        case CMD_USER:
+        {
+            if (arg_vector.size() < 2 || arg_vector[0].empty() || arg_vector[1].empty()) {
+                std::cerr << ERROR << "USER command requires a valid username and real name" << std::endl;
+                return;
+            }
+            Client &client = msg.getSender();
+            client.setUsername(arg_vector[0]);
+            client.setRealName(arg_vector[1]);
+            break;
+        }
+        case CMD_JOIN:
+        {
+            if (arg_vector.empty() || arg_vector[0].empty()) {
+                std::cerr << ERROR << "JOIN command requires a valid channel name" << std::endl;
+                return;
+            }
+
+            const std::string rawName = arg_vector[0];
+            const std::string chan = strip_hash(rawName);
+            const std::string keyArg = (arg_vector.size() > 1) ? arg_vector[1] : "";
+            Client &client = msg.getSender();
+            const std::string currentChannelName = client.getCurrentChannel();
+
+
+            std::cout << "\n\n" << WARNING << "Current channel: " << currentChannelName << std::endl;
+            std::cout << WARNING << "Joining channel: " << chan << std::endl;
+
+            try {
+                // If client is already in a channel, remove them from it (simple single-channel model)
+                if (!currentChannelName.empty() && currentChannelName != chan) {
+                    Channel &oldChannel = server.access_channel(currentChannelName);
+                    oldChannel.removeClient(client);
+                    std::cout << INFO << "Client " << client.getNickname() << " left channel " << currentChannelName << std::endl;
+                }
+
+                Channel &newChannel = server.access_channel(chan);
+
+                // Checks: invite-only, key, limit
+                if (newChannel.isInviteOnly() && !newChannel.isOperator(client) && !newChannel.isInvited(client.getNickname())) {
+                    server.send(client, ":server 473 " + client.getNickname() + " " + ensure_hash(chan) + " :Cannot join channel (+i)");
+                    return;
+                }
+                if (newChannel.hasKey() && !newChannel.check_password(keyArg)) {
+                    server.send(client, ":server 475 " + client.getNickname() + " " + ensure_hash(chan) + " :Cannot join channel (+k)");
+                    return;
+                }
+                if (newChannel.isFull()) {
+                    server.send(client, ":server 471 " + client.getNickname() + " " + ensure_hash(chan) + " :Cannot join channel (+l)");
+                    return;
+                }
+
+                // Already in?
+                std::vector<Client*> &clientsInNewChannelRef = newChannel.getClients();
+                for (size_t i = 0; i < clientsInNewChannelRef.size(); ++i) {
+                    if (clientsInNewChannelRef[i] && clientsInNewChannelRef[i]->getSd() == client.getSd()) {
+                        server.send(client, ":server 331 " + client.getNickname() + " " + ensure_hash(chan) + " :You are already in this channel");
+                        return;
+                    }
+                }
+
+                // Join
                 newChannel.addClient(client);
                 client.setCurrentChannel(chan);
-                std::cout << INFO << "Client " << client.getNickname() << " joined channel " << chan << std::endl;
+                // consume invite if present
+                if (newChannel.isInvited(client.getNickname()))
+                    newChannel.revokeInvite(client.getNickname());
 
-                // 1) Broadcast JOIN to all members (Halloy needs this to enable input)
+                // Broadcast JOIN
                 const std::string vis = ensure_hash(chan);
                 const std::string prefix = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIp();
+                std::vector<Client*> &clientsInNewChannel = newChannel.getClients(); // get AFTER addClient to avoid invalid ref
                 for (size_t i = 0; i < clientsInNewChannel.size(); ++i) {
                     if (clientsInNewChannel[i]) {
                         server.send(*clientsInNewChannel[i], prefix + " JOIN " + vis);
                     }
                 }
 
-                // 2) Topic (+ who/time) numerics
+                // Topic numerics
                 server.send(client, ":server 332 " + client.getNickname() + " " + vis + " :" + newChannel.getTopic());
                 server.send(client, ":server 333 " + client.getNickname() + " " + vis + " " + client.getNickname() + " " + get_current_timestamp());
 
-                // 3) Names + end of names
-                std::string userList = client.getNickname();
-                std::vector<Client*> &clientsInChannel = newChannel.getClients();
-                for (size_t i = 0; i < clientsInChannel.size(); ++i) {
-                    if (clientsInChannel[i] && clientsInChannel[i]->getNickname() != client.getNickname()) {
-                        userList += " " + clientsInChannel[i]->getNickname();
+                // Names
+                std::string userList;
+                for (size_t i = 0; i < clientsInNewChannel.size(); ++i) {
+                    if (clientsInNewChannel[i]) {
+                        if (!userList.empty()) userList += " ";
+                        // Indicate operator with '@' per UI expectations
+                        std::string nick = clientsInNewChannel[i]->getNickname();
+                        if (newChannel.isOperator(*clientsInNewChannel[i]))
+                            userList += "@" + nick;
+                        else
+                            userList += nick;
                     }
                 }
                 server.send(client, ":server 353 " + client.getNickname() + " = " + vis + " :" + userList);
                 server.send(client, ":server 366 " + client.getNickname() + " " + vis + " :End of /NAMES list");
-            } else {
-                server.send(client, ":server 331 " + client.getNickname() + " " + ensure_hash(chan) + " :You are already in this channel");
+            } catch (const std::runtime_error& e) {
+                std::cerr << ERROR << "Error joining channel: " << e.what() << std::endl;
             }
-        } catch (const std::runtime_error& e) {
-            std::cerr << ERROR << "Error joining channel: " << e.what() << std::endl;
+            break;
         }
-    }
-    else if (command == "PRIVMSG")
-    {
-        if (args.empty()) {
-            server.send(msg.getSender(), ":server 412 " + msg.getSender().getNickname() + " :No text to send");
-            return;
-        }
-
-        // Parse: PRIVMSG <target> :<message>
-        // Extract target
-        size_t sp = args.find(' ');
-        if (sp == std::string::npos) {
-            server.send(msg.getSender(), ":server 411 " + msg.getSender().getNickname() + " :No recipient given (PRIVMSG)");
-            return;
-        }
-        std::string target = args.substr(0, sp);
-        // Extract message after " :"
-        std::string text;
-        size_t col = args.find(" :");
-        if (col != std::string::npos) {
-            text = args.substr(col + 2);
-        } else {
-            // Fallback: rest after first space
-            text = args.substr(sp + 1);
-        }
-        if (text.empty()) {
-            server.send(msg.getSender(), ":server 412 " + msg.getSender().getNickname() + " :No text to send");
-            return;
-        }
-
-        const std::string prefix = ":" + msg.getSender().getNickname() + "!" + msg.getSender().getUsername() + "@" + msg.getSender().getIp();
-
-        if (!target.empty() && target[0] == '#') {
-            // Channel message
-            const std::string chan = strip_hash(target);
-            try {
-                Channel &channel = server.access_channel(chan);
-                std::vector<Client*> &clientsInChannel = channel.getClients();
-                const std::string vis = ensure_hash(chan);
-                for (size_t i = 0; i < clientsInChannel.size(); ++i) {
-                    if (clientsInChannel[i]) {
-                        // Deliver to everyone including sender (usual IRC behavior)
-                        server.send(*clientsInChannel[i], prefix + " PRIVMSG " + vis + " :" + text);
-                    }
-                }
-            } catch (const std::runtime_error&) {
-                server.send(msg.getSender(), ":server 403 " + msg.getSender().getNickname() + " " + target + " :No such channel");
-            }
-        } else {
-            // User-to-user message
-            bool delivered = false;
-            std::vector<Client> &clients = server.get_clients();
-            for (size_t i = 0; i < clients.size(); ++i) {
-                if (clients[i].getNickname() == target) {
-                    server.send(clients[i], prefix + " PRIVMSG " + target + " :" + text);
-                    // Echo back to sender so UI displays it immediately
-                    server.send(msg.getSender(), prefix + " PRIVMSG " + target + " :" + text);
-                    delivered = true;
-                    break;
-                }
-            }
-            if (!delivered) {
-                server.send(msg.getSender(), ":server 401 " + msg.getSender().getNickname() + " " + target + " :No such nick");
-            }
-        }
-    }
-    else if (command == "LIST")
-    {
-        Client &client = msg.getSender();
-        server.send(client, ":server 321 " + client.getNickname() + " Channel :Users Name");
-
-        std::vector<Channel> &channels = server.get_channels();
-        std::cout << INFO << "Available channels:" << std::endl;
-        for (size_t i = 0; i < channels.size(); ++i)
+        case CMD_PRIVMSG:
         {
-            int clientCount = channels[i].getClients().size();
-            std::string response = " " + ensure_hash(channels[i].getName()) + " ";
-            response = append_number(response, clientCount);
-            response += " :" + channels[i].getTopic();
-            server.send(client, ":server 322 " + client.getNickname() + response);
-            std::cout << channels[i].getName() << " | Clients: " << clientCount << " | Topic: " << channels[i].getTopic() << std::endl;
-        }
-        server.send(client, ":server 323 " + client.getNickname() + " :End of /LIST");
-    }
-    else if (command == "CAP")
-    {
-        if (arg_vector.empty() || arg_vector[0].empty())
-        {
-            std::cerr << ERROR << "CAP command requires a valid argument" << std::endl;
-            return;
-        }
-        Client &client = msg.getSender();
-        std::string capCommand = arg_vector[0];
-
-        if (capCommand == "LS")
-        {
-            std::string response = ":server  CAP * LS :\r\n";
-            server.send(client, response);
-        }
-        else if (capCommand == "REQ")
-        {
-            if (arg_vector.size() < 2 || arg_vector[1].empty())
-            {
-                std::cerr << ERROR << "CAP REQ command requires a valid capability" << std::endl;
+            if (args.empty()) {
+                server.send(msg.getSender(), ":server 412 " + msg.getSender().getNickname() + " :No text to send");
                 return;
             }
-            server.send(client, ":server  CAP * ACK " + arg_vector[1]);
-        }
-        else if (capCommand == "END")
-            std::cout << "Client negotiation ended successfully!" << std::endl;
-        else
-        {
-            std::cerr << ERROR << "Unknown CAP command: " << capCommand << std::endl;
-            server.send(client, ":server  CAP * NAK :Unknown command");
-        }
-    }
-    else if (command == "KICK")
-    {
-        if (arg_vector.size() < 2 || arg_vector[0].empty() || arg_vector[1].empty())
-        {
-            std::cerr << ERROR << "KICK command requires a valid channel and user" << std::endl;
-            return;
-        }
-        
-        Channel &channel = server.access_channel(strip_hash(arg_vector[0]));
-        Client &client = get_client_from_channel_by_name(channel, arg_vector[1]);
-        channel.removeClient(client);
-        std::cout << WARNING << "Kicking user: " << arg_vector[1] << " from channel " << arg_vector[0] << std::endl;
-        std::string response = ":server  KICK " + ensure_hash(strip_hash(arg_vector[0])) + " " + arg_vector[1] + " :You have been kicked from the channel\n";
-        server.send(client, response);
-    }
-    else if (command == "PING")
-    {
-        std::cout << INFO << "Received PING from " << msg.getSender().getNickname() << std::endl;
-        std::string response = "PONG :" + arg_vector[0] + "\r\n";
-        server.send(msg.getSender(), response);
-    }
-    else if (command == "WHO")
-    {
-        if (arg_vector.empty() || arg_vector[0].empty()) {
-            std::cerr << ERROR << "WHO command requires a valid channel name" << std::endl;
-            return;
-        }
 
-        const std::string chan = strip_hash(arg_vector[0]);
-        Client &client = msg.getSender();
+            // Parse: PRIVMSG <target> :<message>
+            // Extract target
+            size_t sp = args.find(' ');
+            if (sp == std::string::npos) {
+                server.send(msg.getSender(), ":server 411 " + msg.getSender().getNickname() + " :No recipient given (PRIVMSG)");
+                return;
+            }
+            std::string target = args.substr(0, sp);
+            // Extract message after " :"
+            std::string text;
+            size_t col = args.find(" :");
+            if (col != std::string::npos) {
+                text = args.substr(col + 2);
+            } else {
+                // Fallback: rest after first space
+                text = args.substr(sp + 1);
+            }
+            if (text.empty()) {
+                server.send(msg.getSender(), ":server 412 " + msg.getSender().getNickname() + " :No text to send");
+                return;
+            }
 
-        try
-        {
-            Channel &channel = server.access_channel(chan);
-            if (channel.getClients().empty())
-                return (server.send(client, ":server 315 " + client.getNickname() + " " + ensure_hash(chan) + " :End of /WHO list\r\n"));
-            std::vector<Client*> &clientsInChannel = channel.getClients();
-            for (size_t i = 0; i < clientsInChannel.size(); ++i) {
-                if (clientsInChannel[i])
-                {
-                    std::string response = ":server 352 " + client.getNickname() + " " + ensure_hash(chan) + " " +
-                                           clientsInChannel[i]->getUsername() + " " +
-                                           clientsInChannel[i]->getIp() + " server " +
-                                           clientsInChannel[i]->getNickname() + " H :0 " +
-                                           clientsInChannel[i]->getRealName() + "\r\n";
-                    server.send(client, response);
+            const std::string prefix = ":" + msg.getSender().getNickname() + "!" + msg.getSender().getUsername() + "@" + msg.getSender().getIp();
+
+            if (!target.empty() && target[0] == '#') {
+                // Channel message
+                const std::string chan = strip_hash(target);
+                try {
+                    Channel &channel = server.access_channel(chan);
+                    std::vector<Client*> &clientsInChannel = channel.getClients();
+                    const std::string vis = ensure_hash(chan);
+                    for (size_t i = 0; i < clientsInChannel.size(); ++i) {
+                        if (clientsInChannel[i]) {
+                            // Deliver to everyone including sender (usual IRC behavior)
+                            server.send(*clientsInChannel[i], prefix + " PRIVMSG " + vis + " :" + text);
+                        }
+                    }
+                } catch (const std::runtime_error&) {
+                    server.send(msg.getSender(), ":server 403 " + msg.getSender().getNickname() + " " + target + " :No such channel");
+                }
+            } else {
+                // User-to-user message
+                bool delivered = false;
+                std::vector<Client> &clients = server.get_clients();
+                for (size_t i = 0; i < clients.size(); ++i) {
+                    if (clients[i].getNickname() == target) {
+                        server.send(clients[i], prefix + " PRIVMSG " + target + " :" + text);
+                        // Echo back to sender so UI displays it immediately
+                        server.send(msg.getSender(), prefix + " PRIVMSG " + target + " :" + text);
+                        delivered = true;
+                        break;
+                    }
+                }
+                if (!delivered) {
+                    server.send(msg.getSender(), ":server 401 " + msg.getSender().getNickname() + " " + target + " :No such nick");
                 }
             }
-            server.send(client, ":server 315 " + client.getNickname() + " " + ensure_hash(chan) + " :End of /WHO list\r\n");
-        } catch (const std::runtime_error& e) {
-            std::cerr << ERROR << "Error processing WHO command: " << e.what() << std::endl;
-            server.send(client, ":server 401 " + client.getNickname() + " " + ensure_hash(chan) + " :No such channel\r\n");
+            break;
         }
-    }
-    else if (command == "QUIT")
-    {
-        Client &client = msg.getSender();
-        std::cout << WARNING << "Client " << client.getNickname() << " is disconnecting." << std::endl;
-        close(client.getSd());
-        server.remove_client(client.getSd());
-        return;
-    }
-    else
-    {
-        std::cerr << ERROR << "Unknown command: " << command << std::endl;
-        server.send(msg.getSender(), "ERROR :Unknown command: " + command);
+        case CMD_LIST:
+        {
+            Client &client = msg.getSender();
+            server.send(client, ":server 321 " + client.getNickname() + " Channel :Users Name");
+
+            std::vector<Channel> &channels = server.get_channels();
+            std::cout << INFO << "Available channels:" << std::endl;
+            for (size_t i = 0; i < channels.size(); ++i)
+            {
+                int clientCount = channels[i].getClients().size();
+                std::string response = " " + ensure_hash(channels[i].getName()) + " ";
+                response = append_number(response, clientCount);
+                response += " :" + channels[i].getTopic();
+                server.send(client, ":server 322 " + client.getNickname() + response);
+                std::cout << channels[i].getName() << " | Clients: " << clientCount << " | Topic: " << channels[i].getTopic() << std::endl;
+            }
+            server.send(client, ":server 323 " + client.getNickname() + " :End of /LIST");
+            break;
+        }
+        case CMD_CAP:
+        {
+            if (arg_vector.empty() || arg_vector[0].empty())
+            {
+                std::cerr << ERROR << "CAP command requires a valid argument" << std::endl;
+                return;
+            }
+            Client &client = msg.getSender();
+            std::string capCommand = arg_vector[0];
+
+            if (capCommand == "LS")
+            {
+                std::string response = ":server  CAP * LS :\r\n";
+                server.send(client, response);
+            }
+            else if (capCommand == "REQ")
+            {
+                if (arg_vector.size() < 2 || arg_vector[1].empty())
+                {
+                    std::cerr << ERROR << "CAP REQ command requires a valid capability" << std::endl;
+                    return;
+                }
+                server.send(client, ":server  CAP * ACK " + arg_vector[1]);
+            }
+            else if (capCommand == "END")
+                std::cout << "Client negotiation ended successfully!" << std::endl;
+            else
+            {
+                std::cerr << ERROR << "Unknown CAP command: " << capCommand << std::endl;
+                server.send(client, ":server  CAP * NAK :Unknown command");
+            }
+            break;
+        }
+        case CMD_KICK:
+        {
+            if (arg_vector.size() < 2) {
+                std::cerr << ERROR << "KICK requires <channel> <nick> [reason]" << std::endl;
+                return;
+            }
+            const std::string chan = strip_hash(arg_vector[0]);
+            const std::string targetNick = arg_vector[1];
+            std::string reason = "Kicked";
+            size_t col = msg.getContent().find(" :");
+            if (col != std::string::npos) reason = msg.getContent().substr(col + 2);
+
+            try {
+                Channel &channel = server.access_channel(chan);
+                if (!channel.isOperator(msg.getSender())) {
+                    server.send(msg.getSender(), ":server 482 " + msg.getSender().getNickname() + " " + ensure_hash(chan) + " :You're not channel operator");
+                    return;
+                }
+                Client &target = get_client_from_channel_by_name(channel, targetNick);
+                const std::string prefix = ":" + msg.getSender().getNickname() + "!" + msg.getSender().getUsername() + "@" + msg.getSender().getIp();
+                const std::string vis = ensure_hash(chan);
+                // Broadcast KICK
+                std::vector<Client*> &clients = channel.getClients();
+                for (size_t i = 0; i < clients.size(); ++i) {
+                    if (clients[i])
+                        server.send(*clients[i], prefix + " KICK " + vis + " " + targetNick + " :" + reason);
+                }
+                // Notify target and remove
+                server.send(target, prefix + " KICK " + vis + " " + targetNick + " :" + reason);
+                channel.removeClient(target);
+                if (target.getCurrentChannel() == chan)
+                    target.setCurrentChannel("");
+            } catch (const std::exception &e) {
+                std::cerr << ERROR << "KICK failed: " << e.what() << std::endl;
+            }
+            break;
+        }
+        case CMD_INVITE:
+        {
+            if (arg_vector.size() < 2) {
+                std::cerr << ERROR << "INVITE requires <nick> <channel>" << std::endl;
+                return;
+            }
+            const std::string targetNick = arg_vector[0];
+            const std::string chan = strip_hash(arg_vector[1]);
+
+            try {
+                Channel &channel = server.access_channel(chan);
+                if (!channel.isOperator(msg.getSender())) {
+                    server.send(msg.getSender(), ":server 482 " + msg.getSender().getNickname() + " " + ensure_hash(chan) + " :You're not channel operator");
+                    return;
+                }
+                Client *target = find_client_by_nick(server, targetNick);
+                if (!target) {
+                    server.send(msg.getSender(), ":server 401 " + msg.getSender().getNickname() + " " + targetNick + " :No such nick");
+                    return;
+                }
+                // Do not invite if already in channel
+                std::vector<Client*> &clients = channel.getClients();
+                for (size_t i = 0; i < clients.size(); ++i) {
+                    if (clients[i] && clients[i]->getNickname() == targetNick) {
+                        server.send(msg.getSender(), ":server 443 " + msg.getSender().getNickname() + " " + targetNick + " " + ensure_hash(chan) + " :is already on channel");
+                        return;
+                    }
+                }
+                channel.invite(targetNick);
+                server.send(msg.getSender(), ":server 341 " + msg.getSender().getNickname() + " " + targetNick + " " + ensure_hash(chan));
+                const std::string prefix = ":" + msg.getSender().getNickname() + "!" + msg.getSender().getUsername() + "@" + msg.getSender().getIp();
+                server.send(*target, prefix + " INVITE " + targetNick + " :" + ensure_hash(chan));
+            } catch (const std::exception &e) {
+                std::cerr << ERROR << "INVITE failed: " << e.what() << std::endl;
+            }
+            break;
+        }
+        case CMD_TOPIC:
+        {
+            if (arg_vector.empty()) {
+                std::cerr << ERROR << "TOPIC requires <channel> [ :topic ]" << std::endl;
+                return;
+            }
+            const std::string chan = strip_hash(arg_vector[0]);
+            size_t col = msg.getContent().find(" :");
+            bool setTopic = (col != std::string::npos);
+            std::string newTopic = setTopic ? msg.getContent().substr(col + 2) : "";
+
+            try {
+                Channel &channel = server.access_channel(chan);
+                const std::string vis = ensure_hash(chan);
+                if (!setTopic) {
+                    // View
+                    server.send(msg.getSender(), ":server 332 " + msg.getSender().getNickname() + " " + vis + " :" + channel.getTopic());
+                    server.send(msg.getSender(), ":server 333 " + msg.getSender().getNickname() + " " + vis + " " + msg.getSender().getNickname() + " " + get_current_timestamp());
+                    return;
+                }
+                // Set
+                if (channel.isTopicOpOnly() && !channel.isOperator(msg.getSender())) {
+                    server.send(msg.getSender(), ":server 482 " + msg.getSender().getNickname() + " " + vis + " :You're not channel operator");
+                    return;
+                }
+                channel.setTopic(newTopic);
+                const std::string prefix = ":" + msg.getSender().getNickname() + "!" + msg.getSender().getUsername() + "@" + msg.getSender().getIp();
+                std::vector<Client*> &clients = channel.getClients();
+                for (size_t i = 0; i < clients.size(); ++i) {
+                    if (clients[i])
+                        server.send(*clients[i], prefix + " TOPIC " + vis + " :" + newTopic);
+                }
+            } catch (const std::exception &e) {
+                std::cerr << ERROR << "TOPIC failed: " << e.what() << std::endl;
+            }
+            break;
+        }
+        case CMD_MODE:
+        {
+            if (arg_vector.empty()) {
+                std::cerr << ERROR << "MODE requires <channel> [modes] [params]" << std::endl;
+                return;
+            }
+            const std::string chan = strip_hash(arg_vector[0]);
+            try {
+                Channel &channel = server.access_channel(chan);
+                if (arg_vector.size() == 1) {
+                    // Could list current modes (minimal echo)
+                    server.send(msg.getSender(), ":server 324 " + msg.getSender().getNickname() + " " + ensure_hash(chan) + " :");
+                    server.send(msg.getSender(), ":server 332 " + msg.getSender().getNickname() + " " + ensure_hash(chan) + " :" + channel.getTopic());
+                    return;
+                }
+                if (!channel.isOperator(msg.getSender())) {
+                    server.send(msg.getSender(), ":server 482 " + msg.getSender().getNickname() + " " + ensure_hash(chan) + " :You're not channel operator");
+                    return;
+                }
+                // Parse mode string like +it-k key -o nick +l 10
+                std::string modeStr = arg_vector[1];
+                int sign = 0; // +1 for '+', -1 for '-'
+                size_t paramIndex = 2;
+                std::string applied; // to echo/broadcast
+
+                const std::string prefix = ":" + msg.getSender().getNickname() + "!" + msg.getSender().getUsername() + "@" + msg.getSender().getIp();
+                const std::string vis = ensure_hash(chan);
+
+                for (size_t i = 0; i < modeStr.size(); ++i) {
+                    char c = modeStr[i];
+                    if (c == '+') { sign = 1; applied += "+"; continue; }
+                    if (c == '-') { sign = -1; applied += "-"; continue; }
+                    if (sign == 0) continue;
+                    switch (c) {
+                    case 'i':
+                        channel.setInviteOnly(sign > 0);
+                        applied += "i";
+                        break;
+                    case 't':
+                        channel.setTopicOpOnly(sign > 0);
+                        applied += "t";
+                        break;
+                    case 'k':
+                        if (sign > 0) {
+                            if (paramIndex >= arg_vector.size()) break;
+                            channel.setKey(arg_vector[paramIndex++]);
+                            applied += "k";
+                        } else {
+                            channel.clearKey();
+                            applied += "k";
+                        }
+                        break;
+                    case 'o': { // FIX: add scope to contain variable declarations
+                        if (paramIndex >= arg_vector.size()) break;
+                        std::string nick = arg_vector[paramIndex++];
+                        Client *target = find_client_by_nick(server, nick);
+                        if (target) {
+                            if (sign > 0) channel.addOperator(*target);
+                            else channel.removeOperator(nick);
+                            applied += "o";
+                        }
+                        break;
+                    }
+                    case 'l':
+                        if (sign > 0) {
+                            if (paramIndex >= arg_vector.size()) break;
+                            int lim = atoi(arg_vector[paramIndex++].c_str());
+                            channel.setLimit(lim);
+                            applied += "l";
+                        } else {
+                            channel.setLimit(-1);
+                            applied += "l";
+                        }
+                        break;
+                    }
+                }
+                // Broadcast MODE change to channel
+                if (!applied.empty()) {
+                    std::string line = prefix + " MODE " + vis + " " + applied;
+                    // Append trailing params used by last op where needed is omitted for brevity
+                    std::vector<Client*> &clients = channel.getClients();
+                    for (size_t i = 0; i < clients.size(); ++i) {
+                        if (clients[i])
+                            server.send(*clients[i], line);
+                    }
+                }
+            } catch (const std::exception &e) {
+                std::cerr << ERROR << "MODE failed: " << e.what() << std::endl;
+            }
+            break;
+        }
+        case CMD_PING:
+        {
+            std::cout << INFO << "Received PING from " << msg.getSender().getNickname() << std::endl;
+            std::string response = "PONG :" + arg_vector[0] + "\r\n";
+            server.send(msg.getSender(), response);
+            break;
+        }
+        case CMD_WHO:
+        {
+            if (arg_vector.empty() || arg_vector[0].empty()) {
+                std::cerr << ERROR << "WHO command requires a valid channel name" << std::endl;
+                return;
+            }
+
+            const std::string chan = strip_hash(arg_vector[0]);
+            Client &client = msg.getSender();
+
+            try
+            {
+                Channel &channel = server.access_channel(chan);
+                if (channel.getClients().empty())
+                    return (server.send(client, ":server 315 " + client.getNickname() + " " + ensure_hash(chan) + " :End of /WHO list\r\n"));
+                std::vector<Client*> &clientsInChannel = channel.getClients();
+                for (size_t i = 0; i < clientsInChannel.size(); ++i) {
+                    if (clientsInChannel[i])
+                    {
+                        std::string response = ":server 352 " + client.getNickname() + " " + ensure_hash(chan) + " " +
+                                               clientsInChannel[i]->getUsername() + " " +
+                                               clientsInChannel[i]->getIp() + " server " +
+                                               clientsInChannel[i]->getNickname() + " H :0 " +
+                                               clientsInChannel[i]->getRealName() + "\r\n";
+                        server.send(client, response);
+                    }
+                }
+                server.send(client, ":server 315 " + client.getNickname() + " " + ensure_hash(chan) + " :End of /WHO list\r\n");
+            } catch (const std::runtime_error& e) {
+                std::cerr << ERROR << "Error processing WHO command: " << e.what() << std::endl;
+                server.send(client, ":server 401 " + client.getNickname() + " " + ensure_hash(chan) + " :No such channel\r\n");
+            }
+            break;
+        }
+        case CMD_QUIT:
+        {
+            Client &client = msg.getSender();
+            std::cout << WARNING << "Client " << client.getNickname() << " is disconnecting." << std::endl;
+            close(client.getSd());
+            server.remove_client(client.getSd());
+            return;
+        }
+        default:
+        {
+            std::cerr << ERROR << "Unknown command: " << command << std::endl;
+            server.send(msg.getSender(), "ERROR :Unknown command: " + command);
+            break;
+        }
     }
 }
 
