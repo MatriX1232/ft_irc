@@ -9,7 +9,7 @@
 #include <string>
 #include <algorithm>
 
-Server::Server(int port, std::string password) : _port(port), _password(password), _serverName("matrix25565")
+Server::Server(int port, std::string password) : _port(port), _password(password), _serverName("MatrixIRC")
 {
     // Initialize server socket descriptor
     this->_serverSd = -1;
@@ -129,20 +129,28 @@ void Server::halloy_support(Client &client, Message &msg)
     for (int i = 0; i < (int)line_split.size(); i++)
     {
         std::string command = line_split[i];
-        // Skip empty lines
-        if (command.empty()) {
-            continue;
-        }
-        // Remove carriage returns if present
+
+        // Remove trailing CR if present
         size_t cr_pos = command.find('\r');
-        if (cr_pos != std::string::npos) {
+        if (cr_pos != std::string::npos)
             command = command.substr(0, cr_pos);
-        }
-        
+
+        // Trim leading spaces to avoid blank/space-only commands
+        size_t first_non_space = command.find_first_not_of(" \t");
+        if (first_non_space == std::string::npos)
+            continue;
+        if (first_non_space > 0)
+            command.erase(0, first_non_space);
+
+        if (command.empty())
+            continue;
+
         std::cout << WARNING << "Current init command: " << command << std::endl;
-        parse_initial_message(*this->get_self(), client, command);
+
+        // Use the unified parser
+        Message synthetic(client, client.getNickname(), command);
+        parse_message(*this, synthetic);
     }
-    
 }
 
 int Server::disconnect()

@@ -3,12 +3,12 @@
 #include <iostream>
 #include <string>
 
-Client::Client(int sd, std::string ip, int port) : _clientSd(sd), _ip(ip), _port(port), _authenticated(false)
+Client::Client(int sd, std::string ip, int port) : _clientSd(sd), _ip(ip), _port(port), _authenticated(false), _passCompleted(false)
 {
     // std::cout << "Created new CLIENT" << std::endl;
 }
 
-Client::Client() : _clientSd(-1), _port(0), _authenticated(false)
+Client::Client() : _clientSd(-1), _port(0), _authenticated(false), _passCompleted(false)
 {
     // std::cout << "Created new CLIENT" << std::endl;
 }
@@ -96,6 +96,16 @@ void Client::setSd(const int sd)
 void Client::setIp(const std::string& ip)
 {
     this->_ip = ip;
+}
+
+void Client::setPassCompleted(const bool completed)
+{
+    this->_passCompleted = completed;
+}
+
+bool Client::isPassCompleted() const
+{
+    return this->_passCompleted;
 }
 
 void Client::setPort(int port)

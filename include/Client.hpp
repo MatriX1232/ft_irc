@@ -32,6 +32,7 @@ class Client
 		std::string     _nickname;
 		std::string		_realName;
 		std::string		_username;
+		bool			_passCompleted;
 
 	public:
 		Client();
@@ -63,6 +64,8 @@ class Client
 		void	setIp(const std::string& ip);
 		void	setPort(int port);
 		void	setCurrentChannel(const std::string& channel);
+		void	setPassCompleted(bool completed);
+		bool	isPassCompleted() const;
 		bool	isEmpty() const;
 
 		friend std::ostream &operator<<(std::ostream& os, const Client& client);

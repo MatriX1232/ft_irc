@@ -68,36 +68,61 @@ static inline Cmd command_id(const std::string &s) {
 void parse_message(Server &server, Message &msg)
 {
     const std::string content = msg.getContent();
-    const std::string command = content.substr(0, content.find(' '));
-    const std::string args = content.substr(content.find(' ') + 1);
-    const std::vector<std::string> arg_vector = split(args, ' ');
 
-    if (arg_vector.empty())
-    {
-        std::cerr << ERROR << "No arguments provided" << std::endl;
-        return;
-    }
+    // Robust command/args extraction
+    size_t sp = content.find(' ');
+    const std::string command = (sp == std::string::npos) ? content : content.substr(0, sp);
+    const std::string args = (sp == std::string::npos) ? "" : content.substr(sp + 1);
+    const std::vector<std::string> arg_vector = args.empty() ? std::vector<std::string>() : split(args, ' ');
+
     if (msg.isEmpty())
     {
         std::cerr << ERROR << "Empty message received" << std::endl;
         return;
     }
-    
+
     switch (command_id(command))
     {
         case CMD_PASS:
         {
-            Channel &channel = server.access_channel(msg.getSender().getCurrentChannel());
+            if (arg_vector.empty() || arg_vector[0].empty()) {
+                // server-style numeric
+                server.send(msg.getSender(), ":server 464 * :Password required");
+                return;
+            }
 
-            if (channel.check_password(arg_vector[0]))
+            Client &sender = msg.getSender();
+            const std::string pass = arg_vector[0];
+
+            // If client is not in a channel, treat as server password (initial handshake).
+            if (sender.getCurrentChannel().empty()) {
+                if (sender.isPassCompleted()) {
+                    std::cerr << ERROR << "PASS command already completed for client: " << sender.getNickname() << std::endl;
+                    server.send(sender, ":server 462 * :You may not reregister");
+                    return;
+                }
+                if (server.check_password(pass)) {
+                    std::cout << SUCCESS << "Password accepted for client: " << sender.getFd() << std::endl;
+                    sender.setPassCompleted(true);
+                } else {
+                    std::cerr << ERROR << "Incorrect server password for client: " << sender.getNickname() << std::endl;
+                    server.send(sender, ":" + server.get_serverName() + " NOTICE * :Password incorrect");
+                    sender.setPassCompleted(false);
+                }
+                return;
+            }
+
+            // Otherwise, treat as channel password (legacy behavior)
+            Channel &channel = server.access_channel(sender.getCurrentChannel());
+            if (channel.check_password(pass))
             {
-                msg.getSender().setAuthenticated(true);
-                std::cout << SUCCESS << "Password accepted for client: " << msg.getSender().getFd() << std::endl;
+                sender.setAuthenticated(true);
+                std::cout << SUCCESS << "Channel password accepted for client: " << sender.getFd() << std::endl;
             }
             else
             {
-                std::cerr << ERROR << "Incorrect password for client: " << msg.getSender().getNickname() << std::endl;
-                close(msg.getSender().getSd());
+                std::cerr << ERROR << "Incorrect channel password for client: " << sender.getNickname() << std::endl;
+                close(sender.getSd());
                 return;
             }
             break;
@@ -321,12 +346,11 @@ void parse_message(Server &server, Message &msg)
                 return;
             }
             Client &client = msg.getSender();
-            std::string capCommand = arg_vector[0];
+            const std::string capCommand = arg_vector[0];
 
             if (capCommand == "LS")
             {
-                std::string response = ":server  CAP * LS :\r\n";
-                server.send(client, response);
+                server.send(client, ":" + server.get_serverName() + " CAP * LS :");
             }
             else if (capCommand == "REQ")
             {
@@ -335,14 +359,47 @@ void parse_message(Server &server, Message &msg)
                     std::cerr << ERROR << "CAP REQ command requires a valid capability" << std::endl;
                     return;
                 }
-                server.send(client, ":server  CAP * ACK " + arg_vector[1]);
+                // Keep simple ACK; add ':' if needed
+                const std::string caps = (arg_vector[1][0] == ':') ? arg_vector[1] : ":" + arg_vector[1];
+                server.send(client, ":" + server.get_serverName() + " CAP * ACK " + caps);
             }
             else if (capCommand == "END")
-                std::cout << "Client negotiation ended successfully!" << std::endl;
+            {
+                if (client.isAuthenticated())
+                {
+                    std::cerr << WARNING << "Client already authenticated: " << client.getNickname() << std::endl;
+                    return;
+                }
+                if (!client.isPassCompleted())
+                {
+                    std::cerr << ERROR << "Client attempted CAP END without completing PASS" << std::endl;
+                    server.send(client, ":" + server.get_serverName() + " NOTICE * :You must complete PASS before CAP END");
+                    return;
+                }
+                const bool hasNick = !client.getNickname().empty();
+                const bool hasUser = !client.getUsername().empty();
+                if (!hasNick || !hasUser)
+                {
+                    server.send(client, ":" + server.get_serverName() + " NOTICE * :Send CAP END after NICK and USER");
+                    return;
+                }
+
+                std::cout << SUCCESS << "Client authenticated: " << client.getNickname() << std::endl;
+                client.setAuthenticated(true);
+
+                const std::string nick = client.getNickname().empty() ? "*" : client.getNickname();
+                server.send(client, ":" + server.get_serverName() + " 001 " + nick + " :Welcome to the IRC server, " + nick + "!");
+                server.send(client, ":" + server.get_serverName() + " 002 " + nick + " :Your host is " + server.get_serverName() + ", running version 1.0");
+                server.send(client, ":" + server.get_serverName() + " 004 " + nick + " " + server.get_serverName() + " 1.0 o o");
+                server.send(client, ":" + server.get_serverName() + " 375 " + nick + " :- " + server.get_serverName() + " Message of the day -");
+                server.send(client, ":" + server.get_serverName() + " 372 " + nick + " :- To what question is 42 an answer? ");
+                server.send(client, ":" + server.get_serverName() + " 372 " + nick + " :- Type /join #general to start chatting.");
+                server.send(client, ":" + server.get_serverName() + " 376 " + nick + " :End of /MOTD command");
+            }
             else
             {
                 std::cerr << ERROR << "Unknown CAP command: " << capCommand << std::endl;
-                server.send(client, ":server  CAP * NAK :Unknown command");
+                server.send(client, ":" + server.get_serverName() + " CAP * NAK :Unknown command");
             }
             break;
         }
@@ -551,7 +608,8 @@ void parse_message(Server &server, Message &msg)
         case CMD_PING:
         {
             std::cout << INFO << "Received PING from " << msg.getSender().getNickname() << std::endl;
-            std::string response = "PONG :" + arg_vector[0] + "\r\n";
+            const std::string token = (arg_vector.empty() ? server.get_serverName() : arg_vector[0]);
+            std::string response = "PONG :" + token + "\r\n";
             server.send(msg.getSender(), response);
             break;
         }
@@ -603,133 +661,5 @@ void parse_message(Server &server, Message &msg)
             server.send(msg.getSender(), "ERROR :Unknown command: " + command);
             break;
         }
-    }
-}
-
-void    parse_initial_message(Server &server, Client &client, std::string cmd)
-{
-    const std::vector<std::string> arg_vector = split(cmd, ' ');
-
-    if (arg_vector[0] == "PASS")
-    {
-        if (arg_vector.size() < 2) {
-            server.send(client, ":server 464 * :Password required");
-            return;
-        }
-        if (server.check_password(arg_vector[1]))
-            std::cout << SUCCESS << "Password accepted for client:\n" << client << std::endl;
-        else
-        {
-            std::cerr << ERROR << "Incorrect password for client:\n" << client << std::endl;
-            server.send(client, ":" + server.get_serverName() + " NOTICE * :Password incorrect");
-            return;
-        }
-    }
-    else if (arg_vector[0] == "CAP")
-    {
-        if (arg_vector.size() < 2) {
-            server.send(client, ":" + server.get_serverName() + " CAP * NAK :Missing subcommand");
-            return;
-        }
-
-        const std::string sub = arg_vector[1];
-
-        if (sub == "LS")
-        {
-            // Reply to CAP LS with an (empty) capabilities list for now.
-            server.send(client, ":" + server.get_serverName() + " CAP * LS :");
-        }
-        else if (sub == "REQ")
-        {
-            // Typical client sends: CAP REQ :cap1 cap2
-            // Our split() keeps the colon on the first capability token; reassemble trailing list:
-            if (arg_vector.size() < 3) {
-                server.send(client, ":" + server.get_serverName() + " CAP * NAK :");
-                return;
-            }
-            std::string caps;
-            for (size_t i = 2; i < arg_vector.size(); ++i) {
-                if (!caps.empty()) caps += " ";
-                caps += arg_vector[i];
-            }
-            // ACK what was requested (or validate if you want)
-            server.send(client, ":" + server.get_serverName() + " CAP * ACK " + (caps[0] == ':' ? caps : ":" + caps));
-        }
-        else if (sub == "END")
-        {
-            // Require USER (and NICK) to be set before accepting CAP END.
-            const bool hasNick = !client.getNickname().empty();
-            const bool hasUser = !client.getUsername().empty();
-            if (!hasNick || !hasUser)
-            {
-                server.send(client, ":" + server.get_serverName() + " NOTICE * :Send CAP END after NICK and USER");
-                return;
-            }
-
-            std::cout << SUCCESS << "Client authenticated: " << client.getNickname() << std::endl;
-            client.setAuthenticated(true);
-
-            const std::string nick = client.getNickname().empty() ? "*" : client.getNickname();
-
-            // 001/002/004 welcome numerics
-            server.send(client, ":" + server.get_serverName() + " 001 " + nick + " :Welcome to the IRC server, " + nick + "!");
-            server.send(client, ":" + server.get_serverName() + " 002 " + nick + " :Your host is " + server.get_serverName() + ", running version 1.0");
-            server.send(client, ":" + server.get_serverName() + " 004 " + nick + " " + server.get_serverName() + " 1.0 o o");
-            // MOTD sequence to signal end of registration and enable auto-join
-            server.send(client, ":" + server.get_serverName() + " 375 " + nick + " :- " + server.get_serverName() + " Message of the day -");
-            server.send(client, ":" + server.get_serverName() + " 372 " + nick + " :- Welcome to " + server.get_serverName());
-            server.send(client, ":" + server.get_serverName() + " 372 " + nick + " :- Type /join #general to start chatting.");
-            server.send(client, ":" + server.get_serverName() + " 376 " + nick + " :End of /MOTD command");
-        }
-        else
-        {
-            server.send(client, ":" + server.get_serverName() + " CAP * NAK :Unknown subcommand");
-        }
-    }
-    else if (arg_vector[0] == "NICK")
-    {
-        if (arg_vector.size() < 2 || arg_vector[1].empty()) {
-            std::cerr << ERROR << "NICK command requires a valid nickname" << std::endl;
-            return;
-        }
-        for (int i = 0; i < (int)server.get_clients().size(); ++i)
-        {
-            Client &c = server.get_clients()[i];
-            if (c.getNickname() == arg_vector[1]) {
-                std::cerr << ERROR << "Nickname already taken: " << arg_vector[1] << std::endl;
-                server.send(client, "ERROR :Nickname already taken");
-                return;
-            }
-        }
-        client.setNickname(arg_vector[1]);
-        std::cout << INFO << "Client nickname set to: " << client.getNickname() << std::endl;
-    }
-    else if (arg_vector[0] == "USER")
-    {
-        if (arg_vector.size() < 4) {
-            std::cerr << ERROR << "USER command requires username, mode, unused, and realname" << std::endl;
-            return;
-        }
-        std::string username = arg_vector[1];
-        std::string realname;
-        
-        // Handle the realname parameter which may contain spaces
-        // If it starts with a colon, it's typically the remainder of the command
-        if (arg_vector.size() > 3) {
-            if (arg_vector[3].at(0) == ':') {
-                // Remove the colon and use the rest as realname
-                realname = arg_vector[3].substr(1);
-            } else {
-                // Use the fourth parameter as realname
-                realname = arg_vector[3];
-            }
-        }
-        
-        client.setUsername(arg_vector[1]);
-        client.setRealName(realname);
-    }
-    else
-    {
-        server.send(client, ":server ERROR: Expected different initial info msg");
     }
 }
