@@ -60,44 +60,28 @@ int Server::start_listening(int n_clients)
 
 int Server::accept_new_client()
 {
-    struct pollfd pfd;
-    pfd.fd = this->_serverSd;
-    pfd.events = POLLIN;
-
     sockaddr_in newSockAddr;
     socklen_t newSockAddrSize = sizeof(newSockAddr);
     bzero(&newSockAddr, sizeof(newSockAddr));
 
-    int poll_res = poll(&pfd, 1, -1); // Wait indefinitely for an event
-    if (poll_res < 0)
-    {
-        std::cerr << ERROR << "Poll error on server socket" << std::endl;
-        return -1;
-    }
-    if (pfd.revents & POLLIN)
+    while (true)
     {
         int newSd = accept(this->_serverSd, (sockaddr *)&newSockAddr, &newSockAddrSize);
         if (newSd < 0)
         {
             if (errno == EWOULDBLOCK || errno == EAGAIN)
-                return 0; // No new connection yet
+                break;
             std::cerr << ERROR << "Error accepting request from client!" << std::endl;
             return -1;
         }
 
         // Make the new client socket non-blocking
         int flags = fcntl(newSd, F_GETFL, 0);
-        if (flags < 0)
-        {
-            std::cerr << ERROR << "Error getting flags on new socket: " << strerror(errno) << std::endl;
-            close(newSd);
-            return -1;
-        }
-        if (fcntl(newSd, F_SETFL, flags | O_NONBLOCK) < 0)
+        if (flags < 0 || fcntl(newSd, F_SETFL, flags | O_NONBLOCK) < 0)
         {
             std::cerr << ERROR << "Error setting non-blocking on new socket: " << strerror(errno) << std::endl;
             close(newSd);
-            return -1;
+            continue;
         }
 
         this->_newSd = newSd;
@@ -110,9 +94,8 @@ int Server::accept_new_client()
         response += " | IP: " + ip + " | PORT: ";
         response = append_number(response, port);
         std::cout << INFO << response << std::endl;
-        // std::cout << Outline(response, CYAN, WHITE, "New client") << std::endl;
+
         newClient.setAuthenticated(false);
-        // this->halloy_support(newClient);
         this->_clients.push_back(std::move(newClient));
     }
     return 0;

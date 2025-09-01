@@ -29,6 +29,16 @@ static Client* find_client_by_nick(Server &server, const std::string &nick) {
     return NULL;
 }
 
+// Helper: find client by fd
+static Client* find_client_by_fd(Server &server, int fd) {
+    std::vector<Client> &clients = server.get_clients();
+    for (size_t i = 0; i < clients.size(); ++i) {
+        if (clients[i].getSd() == fd)
+            return &clients[i];
+    }
+    return NULL;
+}
+
 // New: command id mapping for switch
 enum Cmd {
     CMD_UNKNOWN = 0,
@@ -204,9 +214,9 @@ void parse_message(Server &server, Message &msg)
                 }
 
                 // Already in?
-                std::vector<Client*> &clientsInNewChannelRef = newChannel.getClients();
-                for (size_t i = 0; i < clientsInNewChannelRef.size(); ++i) {
-                    if (clientsInNewChannelRef[i] && clientsInNewChannelRef[i]->getSd() == client.getSd()) {
+                std::vector<int> &fdsRef = newChannel.getClients();
+                for (size_t i = 0; i < fdsRef.size(); ++i) {
+                    if (fdsRef[i] == client.getSd()) {
                         server.send(client, ":server 331 " + client.getNickname() + " " + ensure_hash(chan) + " :You are already in this channel");
                         return;
                     }
@@ -222,11 +232,10 @@ void parse_message(Server &server, Message &msg)
                 // Broadcast JOIN
                 const std::string vis = ensure_hash(chan);
                 const std::string prefix = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIp();
-                std::vector<Client*> &clientsInNewChannel = newChannel.getClients(); // get AFTER addClient to avoid invalid ref
-                for (size_t i = 0; i < clientsInNewChannel.size(); ++i) {
-                    if (clientsInNewChannel[i]) {
-                        server.send(*clientsInNewChannel[i], prefix + " JOIN " + vis);
-                    }
+                std::vector<int> &clientFds = newChannel.getClients(); // AFTER addClient
+                for (size_t i = 0; i < clientFds.size(); ++i) {
+                    Client *rcpt = find_client_by_fd(server, clientFds[i]);
+                    if (rcpt) server.send(*rcpt, prefix + " JOIN " + vis);
                 }
 
                 // Topic numerics
@@ -235,12 +244,12 @@ void parse_message(Server &server, Message &msg)
 
                 // Names
                 std::string userList;
-                for (size_t i = 0; i < clientsInNewChannel.size(); ++i) {
-                    if (clientsInNewChannel[i]) {
+                for (size_t i = 0; i < clientFds.size(); ++i) {
+                    Client *c = find_client_by_fd(server, clientFds[i]);
+                    if (c) {
                         if (!userList.empty()) userList += " ";
-                        // Indicate operator with '@' per UI expectations
-                        std::string nick = clientsInNewChannel[i]->getNickname();
-                        if (newChannel.isOperator(*clientsInNewChannel[i]))
+                        std::string nick = c->getNickname();
+                        if (newChannel.isOperator(*c))
                             userList += "@" + nick;
                         else
                             userList += nick;
@@ -289,12 +298,12 @@ void parse_message(Server &server, Message &msg)
                 const std::string chan = strip_hash(target);
                 try {
                     Channel &channel = server.access_channel(chan);
-                    std::vector<Client*> &clientsInChannel = channel.getClients();
+                    std::vector<int> &fds = channel.getClients();
                     const std::string vis = ensure_hash(chan);
-                    for (size_t i = 0; i < clientsInChannel.size(); ++i) {
-                        if (clientsInChannel[i]) {
-                            // Deliver to everyone including sender (usual IRC behavior)
-                            server.send(*clientsInChannel[i], prefix + " PRIVMSG " + vis + " :" + text);
+                    for (size_t i = 0; i < fds.size(); ++i) {
+                        Client *rcpt = find_client_by_fd(server, fds[i]);
+                        if (rcpt) {
+                            server.send(*rcpt, prefix + " PRIVMSG " + vis + " :" + text);
                         }
                     }
                 } catch (const std::runtime_error&) {
@@ -421,14 +430,15 @@ void parse_message(Server &server, Message &msg)
                     server.send(msg.getSender(), ":server 482 " + msg.getSender().getNickname() + " " + ensure_hash(chan) + " :You're not channel operator");
                     return;
                 }
-                Client &target = get_client_from_channel_by_name(channel, targetNick);
+                Client &target = get_client_from_channel_by_name(server, channel, targetNick); // CHANGED
                 const std::string prefix = ":" + msg.getSender().getNickname() + "!" + msg.getSender().getUsername() + "@" + msg.getSender().getIp();
                 const std::string vis = ensure_hash(chan);
                 // Broadcast KICK
-                std::vector<Client*> &clients = channel.getClients();
-                for (size_t i = 0; i < clients.size(); ++i) {
-                    if (clients[i])
-                        server.send(*clients[i], prefix + " KICK " + vis + " " + targetNick + " :" + reason);
+                std::vector<int> &fds = channel.getClients();
+                for (size_t i = 0; i < fds.size(); ++i) {
+                    Client *rcpt = find_client_by_fd(server, fds[i]);
+                    if (rcpt)
+                        server.send(*rcpt, prefix + " KICK " + vis + " " + targetNick + " :" + reason);
                 }
                 // Notify target and remove
                 server.send(target, prefix + " KICK " + vis + " " + targetNick + " :" + reason);
@@ -461,9 +471,10 @@ void parse_message(Server &server, Message &msg)
                     return;
                 }
                 // Do not invite if already in channel
-                std::vector<Client*> &clients = channel.getClients();
-                for (size_t i = 0; i < clients.size(); ++i) {
-                    if (clients[i] && clients[i]->getNickname() == targetNick) {
+                std::vector<int> &fds = channel.getClients();
+                for (size_t i = 0; i < fds.size(); ++i) {
+                    Client *c = find_client_by_fd(server, fds[i]);
+                    if (c && c->getNickname() == targetNick) {
                         server.send(msg.getSender(), ":server 443 " + msg.getSender().getNickname() + " " + targetNick + " " + ensure_hash(chan) + " :is already on channel");
                         return;
                     }
@@ -504,10 +515,11 @@ void parse_message(Server &server, Message &msg)
                 }
                 channel.setTopic(newTopic);
                 const std::string prefix = ":" + msg.getSender().getNickname() + "!" + msg.getSender().getUsername() + "@" + msg.getSender().getIp();
-                std::vector<Client*> &clients = channel.getClients();
-                for (size_t i = 0; i < clients.size(); ++i) {
-                    if (clients[i])
-                        server.send(*clients[i], prefix + " TOPIC " + vis + " :" + newTopic);
+                std::vector<int> &fds = channel.getClients();
+                for (size_t i = 0; i < fds.size(); ++i) {
+                    Client *rcpt = find_client_by_fd(server, fds[i]);
+                    if (rcpt)
+                        server.send(*rcpt, prefix + " TOPIC " + vis + " :" + newTopic);
                 }
             } catch (const std::exception &e) {
                 std::cerr << ERROR << "TOPIC failed: " << e.what() << std::endl;
@@ -593,11 +605,11 @@ void parse_message(Server &server, Message &msg)
                 // Broadcast MODE change to channel
                 if (!applied.empty()) {
                     std::string line = prefix + " MODE " + vis + " " + applied;
-                    // Append trailing params used by last op where needed is omitted for brevity
-                    std::vector<Client*> &clients = channel.getClients();
-                    for (size_t i = 0; i < clients.size(); ++i) {
-                        if (clients[i])
-                            server.send(*clients[i], line);
+                    std::vector<int> &fds = channel.getClients();
+                    for (size_t i = 0; i < fds.size(); ++i) {
+                        Client *rcpt = find_client_by_fd(server, fds[i]);
+                        if (rcpt)
+                            server.send(*rcpt, line);
                     }
                 }
             } catch (const std::exception &e) {
@@ -628,15 +640,16 @@ void parse_message(Server &server, Message &msg)
                 Channel &channel = server.access_channel(chan);
                 if (channel.getClients().empty())
                     return (server.send(client, ":server 315 " + client.getNickname() + " " + ensure_hash(chan) + " :End of /WHO list\r\n"));
-                std::vector<Client*> &clientsInChannel = channel.getClients();
-                for (size_t i = 0; i < clientsInChannel.size(); ++i) {
-                    if (clientsInChannel[i])
+                std::vector<int> &fds = channel.getClients();
+                for (size_t i = 0; i < fds.size(); ++i) {
+                    Client *c = find_client_by_fd(server, fds[i]);
+                    if (c)
                     {
                         std::string response = ":server 352 " + client.getNickname() + " " + ensure_hash(chan) + " " +
-                                               clientsInChannel[i]->getUsername() + " " +
-                                               clientsInChannel[i]->getIp() + " server " +
-                                               clientsInChannel[i]->getNickname() + " H :0 " +
-                                               clientsInChannel[i]->getRealName() + "\r\n";
+                                               c->getUsername() + " " +
+                                               c->getIp() + " server " +
+                                               c->getNickname() + " H :0 " +
+                                               c->getRealName() + "\r\n";
                         server.send(client, response);
                     }
                 }

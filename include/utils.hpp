@@ -26,9 +26,7 @@ int    wait_for_activity(int maxfd, fd_set &readfds);
 std::string append_number(const std::string &str, int number);
 std::string get_current_timestamp();
 
-// client utils
-// Client &get_client_from_msg(const Message &msg);
-Client &get_client_from_channel_by_name(Channel &channel, const std::string &client_name);
+Client &get_client_from_channel_by_name(Server &server, Channel &channel, const std::string &client_name);
 
 
 #endif

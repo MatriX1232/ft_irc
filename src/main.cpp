@@ -14,12 +14,11 @@ std::vector<Message>    check_for_new_messages(Server &server)
 {
     // Use references to avoid copying client state.
     std::vector<Message>    _newMessages;
-    std::vector<Client>     & _clients = server.get_clients(); // CHANGED: reference, not copy
+    std::vector<Client>     & _clients = server.get_clients();
 
     for (int i = 0; i < (int)_clients.size(); i++)
     {
-        Message msg = server.recv(_clients[i]); // operates on real Client
-        // removed noisy debug: std::cout << "recv non-blocking" << std::endl;
+        Message msg = server.recv(_clients[i]);
         if (msg.isValid())  
             _newMessages.push_back(msg);
     }
@@ -51,7 +50,6 @@ int main(int argc, char *argv[])
     Server server(atoi(argv[1]), argv[2]);
     server.start_listening(5);
 
-    // 1) grab listen fd & make it non‐blocking
     int listen_fd = server.getListenFd();
     int flags = fcntl(listen_fd, F_GETFL, 0);
     fcntl(listen_fd, F_SETFL, flags | O_NONBLOCK);
@@ -64,7 +62,6 @@ int main(int argc, char *argv[])
     server.add_channel(channel2);
     server.add_channel(channel3);
 
-    // 2) multiplex accept + recv
     while (true)
     {
         fd_set readfds;
@@ -85,20 +82,19 @@ int main(int argc, char *argv[])
         if (to_shutdown)
             break;
 
-        std::vector<Client> &clients = server.get_clients(); // CHANGED: reference, not copy
+        std::vector<Client> &clients = server.get_clients();
         for (size_t j = 0; j < clients.size(); ++j)
         {
             Client &client = clients[j];
             if (FD_ISSET(client.getFd(), &readfds))
             {
-                Message msg = server.recv(client); // CHANGED: read into the real client
+                Message msg = server.recv(client);
                 if (!msg.isValid())
                 {
-                    // Treat as disconnect and purge client to avoid EBADF in select
                     std::cout << INFO << "Peer disconnected: " << client.getNickname() << " fd=" << client.getFd() << std::endl;
                     close(client.getSd());
                     server.remove_client(client.getSd());
-                    break; // rebuild fd_set on next loop
+                    break;
                 }
                 if (msg.getContent() == SERVER_SHUTDOWN)
                 {
@@ -124,38 +120,11 @@ int main(int argc, char *argv[])
                 }
             }
         }
-
-        // std::vector<Channel> &channels = server.get_channels();
-        // for (size_t i = 0; i < channels.size(); i++)
-        // {
-        //     // data on existing clients?
-        //     std::vector<Client> clients = channels[i].getClients();
-        //     for (size_t j = 0; j < clients.size(); ++j)
-        //     {
-        //         if (FD_ISSET(clients[j].getFd(), &readfds))
-        //         {
-        //             Message msg = server.recv(clients[j]);
-        //             if (!msg.isValid())
-        //                 continue;
-        //             if (msg.getContent() == SERVER_SHUTDOWN)
-        //             {
-        //                 std::cout << "\n\n" << server << "\n\n";
-        //                 server.disconnect();
-        //                 break;
-        //             }
-        //             std::cout << msg << std::endl;
-        //             parse_message(server, msg);
-        //         }
-        //     }
-        // }
     }
-
     server.disconnect();
-
     for (int i = 0; i < (int)server.get_channels().size(); i++)
     {
         std::cout << server.get_channels()[i] << std::endl;
     }
-
     return (EXIT_SUCCESS);
 }

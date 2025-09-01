@@ -13,7 +13,7 @@ class Channel
 {
     private:
         std::vector<Message> _messages;
-        std::vector<Client*> _clients;
+        std::vector<int>     _clients;
         std::string _name;
         std::string _topic;
         std::string _password;   // channel key (MODE +k)
@@ -41,8 +41,8 @@ class Channel
         std::string getName() const;
         std::string getTopic() const;
         void        setTopic(const std::string &topic);
-        std::vector<Client*>& getClients();
-        const std::vector<Client*>& get_clients() const;
+        std::vector<int>& getClients();
+        const std::vector<int>& get_clients() const;
 
         std::vector<Message> getMessages();
         Message getMessageByIndex(int index);

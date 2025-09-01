@@ -20,13 +20,13 @@ Channel::~Channel()
 
 void Channel::addClient(Client &client)
 {
-    // avoid duplicates
+    int fd = client.getSd();
     for (size_t i = 0; i < _clients.size(); ++i)
     {
-        if (_clients[i] && _clients[i]->getSd() == client.getSd())
+        if (_clients[i] == fd)
             return;
     }
-    _clients.push_back(&client);
+    _clients.push_back(fd);
     // Auto-op first user joining an empty channel
     if (_clients.size() == 1)
         addOperator(client);
@@ -34,12 +34,12 @@ void Channel::addClient(Client &client)
 
 void Channel::removeClient(Client &client)
 {
+    int fd = client.getSd();
     for (size_t i = 0; i < _clients.size(); ++i)
     {
-        if (_clients[i] && _clients[i]->getSd() == client.getSd())
+        if (_clients[i] == fd)
         {
             _clients.erase(_clients.begin() + i);
-            // Do not forcibly drop operator status here; keep as is or manage elsewhere.
             std::cout << INFO << "Client removed from channel: " << _name << std::endl;
             return;
         }
@@ -47,12 +47,12 @@ void Channel::removeClient(Client &client)
     std::cerr << WARNING << "Client not found in channel: " << _name << std::endl;
 }
 
-std::vector<Client*>& Channel::getClients()
+std::vector<int>& Channel::getClients()
 {
     return _clients;
 }
 
-const std::vector<Client*>& Channel::get_clients() const
+const std::vector<int>& Channel::get_clients() const
 {
     return this->_clients;
 }
