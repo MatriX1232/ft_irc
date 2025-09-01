@@ -258,21 +258,6 @@ bool Server::check_password(std::string password)
     return (this->_password == password);
 }
 
-int Server::assign_read_mode(int listen_fd, fd_set &readfds)
-{
-    int maxfd = listen_fd;
-
-    // std::vector<Client> clients = this->get_clients();
-    std::vector<Client> &clients = this->get_clients();
-    for (size_t i = 0; i < clients.size(); ++i)
-    {
-        int fd = clients[i].getFd();
-        FD_SET(fd, &readfds);
-        maxfd = std::max(maxfd, fd);
-    }
-    return (maxfd);
-}
-
 Channel &Server::access_channel(std::string channelName)
 {
     // Accept both "#general" and "general"

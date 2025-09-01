@@ -67,7 +67,6 @@ class Server
         Channel &access_channel(std::string channelName);
         
         bool    check_password(std::string password);
-        int     assign_read_mode(int listen_fd, fd_set &readfds);
         void    halloy_support(Client &client, Message &msg);
         void    remove_client(int fd); // remove closed/quit client safely
         friend std::ostream &operator<<(std::ostream &os, const Server &server);

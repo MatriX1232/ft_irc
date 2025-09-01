@@ -12,7 +12,6 @@ SRCS = \
 	src/Message.cpp \
 	src/Channel.cpp \
 	src/utils.cpp \
-	src/socket_utils.cpp \
 	src/ft_logs.cpp \
 	src/Outline.cpp \
 	src/commands/parse_message.cpp

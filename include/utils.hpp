@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <vector>
-#include <sys/select.h>
 #include "Client.hpp"
 #include "Message.hpp"
 #include "Channel.hpp"
@@ -18,9 +17,6 @@ void ft_log_sub(const std::string &str, const std::string &str_optional, int lev
 std::vector<std::string> split(const std::string &str, char delimiter);
 std::string c_strip(char *str);
 
-
-// socket utils
-int    wait_for_activity(int maxfd, fd_set &readfds);
 
 // string utils
 std::string append_number(const std::string &str, int number);

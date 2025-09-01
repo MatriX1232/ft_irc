@@ -143,22 +143,50 @@ void parse_message(Server &server, Message &msg)
                 std::cerr << ERROR << "NICK command requires a valid nickname" << std::endl;
                 return;
             }
-
             Client &client = msg.getSender();
             const std::string newNickname = arg_vector[0];
-
-            for (int i = 0; i < (int)server.get_clients().size(); ++i)
+            const std::string oldNickname = client.getNickname(); // snapshot old nick
+            if (oldNickname == newNickname) {
+                return;
+            }
+            // Check collisions
+            for (size_t i = 0; i < server.get_clients().size(); ++i)
             {
                 Client &c = server.get_clients()[i];
                 if (c.getNickname() == newNickname) {
                     std::cerr << ERROR << "Nickname already taken: " << newNickname << std::endl;
-                    server.send(client, "ERROR: Nickname already taken");
+                    server.send(client, ":server 433 * " + newNickname + " :Nickname is already in use");
                     return;
                 }
             }
-
+            const std::string prefix = ":" + (oldNickname.empty() ? "*" : oldNickname) + "!" + client.getUsername() + "@" + client.getIp();
+            const std::string currentChannelName = client.getCurrentChannel();
+            bool wasOp = false;
+            Channel *chanPtr = NULL;
+            if (!currentChannelName.empty()) {
+                try {
+                    chanPtr = &server.access_channel(currentChannelName);
+                    wasOp = chanPtr->isOperator(client); // checks with OLD nickname
+                } catch (...) {
+                    chanPtr = NULL;
+                }
+            }
             client.setNickname(newNickname);
-            std::cout << INFO << "Client nickname set to: " << client.getNickname() << std::endl;
+            std::cout << INFO << "Client nickname changed: " << oldNickname << " -> " << client.getNickname() << std::endl;
+            if (chanPtr) {
+                if (wasOp && !oldNickname.empty() && oldNickname != newNickname) {
+                    chanPtr->removeOperator(oldNickname);
+                    chanPtr->addOperator(client); // adds under NEW nickname
+                }
+                std::vector<int> &fds = chanPtr->getClients();
+                for (size_t i = 0; i < fds.size(); ++i) {
+                    Client *rcpt = find_client_by_fd(server, fds[i]);
+                    if (rcpt) server.send(*rcpt, prefix + " NICK :" + newNickname);
+                }
+            } else {
+                // Not in any channel yet: still tell the client so its UI updates
+                server.send(client, prefix + " NICK :" + newNickname);
+            }
             break;
         }
         case CMD_USER:
