@@ -40,9 +40,7 @@ int Server::start_listening(int n_clients)
         exit(0);
     }
 
-    // Set socket to non-blocking
-    int flags = fcntl(serverSd, F_GETFL, 0);
-    fcntl(serverSd, F_SETFL, flags | O_NONBLOCK);
+    fcntl(serverSd, F_SETFL, O_NONBLOCK);
 
     int bindStatus = bind(serverSd, (struct sockaddr*) &servAddr, sizeof(servAddr));
     if(bindStatus < 0)
@@ -75,9 +73,7 @@ int Server::accept_new_client()
             return -1;
         }
 
-        // Make the new client socket non-blocking
-        int flags = fcntl(newSd, F_GETFL, 0);
-        if (flags < 0 || fcntl(newSd, F_SETFL, flags | O_NONBLOCK) < 0)
+        if (fcntl(newSd, F_SETFL, O_NONBLOCK) < 0)
         {
             std::cerr << ERROR << "Error setting non-blocking on new socket: " << strerror(errno) << std::endl;
             close(newSd);
