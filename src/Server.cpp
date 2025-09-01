@@ -214,18 +214,13 @@ void    Server::send(Client &client, std::string msg)
 
 Message Server::recv(Client &client)
 {
-    char msg[150];
+    char msg[1000];
 
     // std::cout << "Awaiting client message..." << std::endl;
     memset(&msg, 0, sizeof(msg));   //clear the buffer
     int bytesRead = ::recv(client.getSd(), (char*)&msg, sizeof(msg), 0);
     if (bytesRead == 0 || strcmp(msg, "exit") == 0)
         return Message();
-    // else
-    // {
-    //     if (errno == EWOULDBLOCK || errno == EAGAIN)
-    //         ;
-    // }
     return (Message(client, client.getNickname(), c_strip(msg), std::time(0), bytesRead));
 }
 
